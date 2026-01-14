@@ -588,21 +588,11 @@ var nfc = {
 
 var util = {
     // i must be <= 256
-    toHex: function (i) {
-        var hex;
-
+    byteToHex: function (i) {
         if (i < 0) {
             i += 256;
         }
-
-        hex = i.toString(16);
-
-        // zero padding
-        if (hex.length === 1) {
-            hex = "0" + hex;
-        }
-
-        return hex;
+        return i.toString(16).padStart(2, "0");
     },
 
     toPrintable: function(i) {
@@ -781,6 +771,21 @@ var util = {
 
         var array = new Uint8Array(ints);
         return array.buffer;
+    },
+    
+    // (Special) Convert little endian to balance
+    // ex:
+    // 00 00 00 00 --> 0
+    parseCardAttribute: function(bytes) {
+        return {
+            cardType: bytes[0],
+            appVersion: bytes[1],
+            issueDate: "20" + byteToHex(bytes[2]) + "-" + byteToHex(bytes[3]) + "-" + byteToHex(bytes[4]),
+            expiry: byteToHex(bytes[5]) + "/" + byteToHex(bytes[6]),
+            appletType: bytes[7],
+            productId: (bytes[8] << 8) | bytes[9],
+            flags: bytes[10]
+        };
     }
 
 };
@@ -886,6 +891,7 @@ ndef.textHelper = textHelper;
 nfc.bytesToString = util.bytesToString;
 nfc.stringToBytes = util.stringToBytes;
 nfc.bytesToHexString = util.bytesToHexString;
+nfc.parseCardAttribute = util.parseCardAttribute;
 
 // kludge some global variables for plugman js-module support
 // eventually these should be replaced and referenced via the module
