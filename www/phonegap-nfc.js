@@ -778,7 +778,7 @@ var util = {
     // [6, 6, 23, 7, 89] → "06 06 17 07 59"
     arrayBytesToHexString: function(bytes) {
         return Array.from(bytes).map(b => bytetoHex(b)).join(" ");
-    }
+    },
     // Khusus buat convert Card Attribute
     // ex:
     // 17 09 01 → 2017-09-01
@@ -792,7 +792,7 @@ var util = {
             productId: (bytes[8] << 8) | bytes[9],
             flags: bytes[10]
         };
-    }
+    },
 
     // Mengubah Balance (bytes) -> Balance (angka)
     // ex:
