@@ -844,7 +844,7 @@ var util = {
             throw name + " failed (SW=" + util.byteToHex(sw1) + util.byteToHex(sw2) + ")";
         }
 
-        return hex;
+        return bytes;
     }
 
 };
