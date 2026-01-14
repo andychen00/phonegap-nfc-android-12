@@ -588,7 +588,7 @@ var nfc = {
 
 var util = {
     // i must be <= 256
-    byteToHex: function (i) {
+    toHex: function (i) {
         if (i < 0) {
             i += 256;
         }
@@ -773,15 +773,15 @@ var util = {
         return array.buffer;
     },
     
-    // (Special) Convert little endian to balance
+    // Khusus buat convert Card Attribute
     // ex:
-    // 00 00 00 00 --> 0
+    // 17 09 01 → 2017-09-01
     parseCardAttribute: function(bytes) {
         return {
             cardType: bytes[0],
             appVersion: bytes[1],
-            issueDate: "20" + byteToHex(bytes[2]) + "-" + byteToHex(bytes[3]) + "-" + byteToHex(bytes[4]),
-            expiry: byteToHex(bytes[5]) + "/" + byteToHex(bytes[6]),
+            issueDate: "20" + toHex(bytes[2]) + "-" + toHex(bytes[3]) + "-" + toHex(bytes[4]),
+            expiry: byteToHex(bytes[5]) + "/" + toHex(bytes[6]),
             appletType: bytes[7],
             productId: (bytes[8] << 8) | bytes[9],
             flags: bytes[10]
