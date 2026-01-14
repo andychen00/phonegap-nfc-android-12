@@ -27,7 +27,6 @@ function handleNfcFromIntentFilter() {
 }
 
 document.addEventListener('deviceready', handleNfcFromIntentFilter, false);
-var log = "";
 
 var ndef = {
 
@@ -838,10 +837,6 @@ var util = {
         var resp = await nfc.transceive(hexCmd);
         var bytes = new Uint8Array(resp);
         var hex = util.bytesToHexString(bytes);
-        log = "";
-        log += name + "\n";
-        log += "CMD : " + hexCmd + "\n";
-        log += "RESP: " + hex + "\n\n";
 
         var sw1 = bytes[bytes.length - 2];
         var sw2 = bytes[bytes.length - 1];
@@ -849,7 +844,7 @@ var util = {
             throw name + " failed (SW=" + util.byteToHex(sw1) + util.byteToHex(sw2) + ")";
         }
 
-        return bytes.slice(0, bytes.length - 2);
+        return hex;
     }
 
 };
@@ -958,8 +953,6 @@ nfc.bytesToHexString = util.bytesToHexString;
 nfc.parseCardAttribute = util.parseCardAttribute;
 nfc.parseBalance = util.parseBalance;
 nfc.sendApdu = util.sendApdu;
-nfc.log = log;
-
 
 // kludge some global variables for plugman js-module support
 // eventually these should be replaced and referenced via the module
