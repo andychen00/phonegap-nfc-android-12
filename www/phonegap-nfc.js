@@ -588,7 +588,7 @@ var nfc = {
 
 var util = {
     // i must be <= 256
-    toHex: function (i) {
+    byteToHex: function (i) {
         if (i < 0) {
             i += 256;
         }
@@ -780,8 +780,8 @@ var util = {
         return {
             cardType: bytes[0],
             appVersion: bytes[1],
-            issueDate: "20" + toHex(bytes[2]) + "-" + toHex(bytes[3]) + "-" + toHex(bytes[4]),
-            expiry: byteToHex(bytes[5]) + "/" + toHex(bytes[6]),
+            issueDate: "20" + util.byteToHex(bytes[2]) + "-" + util.byteToHex(bytes[3]) + "-" + util.byteToHex(bytes[4]),
+            expiry: byte util.byteToHex(bytes[5]) + "/" + util.byteToHex(bytes[6]),
             appletType: bytes[7],
             productId: (bytes[8] << 8) | bytes[9],
             flags: bytes[10]
