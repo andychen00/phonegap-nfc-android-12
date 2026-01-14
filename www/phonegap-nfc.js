@@ -778,7 +778,7 @@ var util = {
     // ex:
     // [6, 6, 23, 7, 89] → "06 06 17 07 59"
     arrayBytesToHexString: function(bytes) {
-        return Array.from(bytes).map(b => byteToHex(b)).join(" ");
+        return Array.from(bytes).map(b => util.byteToHex(b)).join(" ");
     },
     // Khusus buat convert Card Attribute
     // ex:
@@ -837,7 +837,7 @@ var util = {
     sendApdu: async function(name, hexCmd) {
         var resp = await nfc.transceive(hexCmd);
         var bytes = new Uint8Array(resp);
-        var hex = nfc.bytesToHexString(bytes);
+        var hex = util.bytesToHexString(bytes);
         log = "";
         log += name + "\n";
         log += "CMD : " + hexCmd + "\n";
