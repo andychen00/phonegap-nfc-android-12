@@ -838,7 +838,7 @@ var util = {
         var resp = await nfc.transceive(hexCmd);
         var bytes = new Uint8Array(resp);
         var hex = nfc.bytesToHexString(bytes);
-
+        log = "";
         log += name + "\n";
         log += "CMD : " + hexCmd + "\n";
         log += "RESP: " + hex + "\n\n";
