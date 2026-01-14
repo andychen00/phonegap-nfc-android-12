@@ -773,6 +773,12 @@ var util = {
         return array.buffer;
     },
     
+    // Mengubah array byte → string hex dengan spasi. 
+    // ex:
+    // [6, 6, 23, 7, 89] → "06 06 17 07 59"
+    arrayBytesToHexString: function(bytes) {
+        return Array.from(bytes).map(b => bytetoHex(b)).join(" ");
+    }
     // Khusus buat convert Card Attribute
     // ex:
     // 17 09 01 → 2017-09-01
@@ -786,6 +792,45 @@ var util = {
             productId: (bytes[8] << 8) | bytes[9],
             flags: bytes[10]
         };
+    }
+
+    // Mengubah Balance (bytes) -> Balance (angka)
+    // ex:
+    // e80300009000 -> 1000
+    parseBalance: function(bytes) {
+        if (bytes.length === 4) {
+            // NEW APPLET
+            var b0 = bytes[0], b1 = bytes[1], b2 = bytes[2], b3 = bytes[3];
+            var balance = (b0) | (b1 << 8) | (b2 << 16) | (b3 << 24);
+            balance = balance >>> 0;
+            return {
+                type: "NEW",
+                balance: balance,
+                raw: util.arrayBytesToHexString(bytes)
+            };
+        }
+        else if (bytes.length >= 10) {
+            // OLD APPLET
+            var b0 = bytes[0], b1 = bytes[1], b2 = bytes[2], b3 = bytes[3];
+            var balance = (b0) | (b1 << 8) | (b2 << 16) | (b3 << 24);
+            balance = balance >>> 0;
+
+            var counter = (bytes[4] << 8) | bytes[5];
+            var year = 2000 + bytes[6];
+            var month = bytes[7];
+            var day = bytes[8];
+            var hour = bytes[9];
+            var min = bytes[10] || 0;
+
+            return {
+                type: "OLD",
+                balance: balance,
+                counter: counter,
+                lastTxn: year + "-" + util.byteToHex(month) + "-" + util.byteToHex(day) + " " + util.byteToHex(hour) + ":" + util.byteToHex(min),
+                raw: util.arrayBytesToHexString(bytes)
+                };
+            }
+        return null;
     }
 
 };
@@ -892,6 +937,7 @@ nfc.bytesToString = util.bytesToString;
 nfc.stringToBytes = util.stringToBytes;
 nfc.bytesToHexString = util.bytesToHexString;
 nfc.parseCardAttribute = util.parseCardAttribute;
+nfc.parseBalance = util.parseBalance;
 
 // kludge some global variables for plugman js-module support
 // eventually these should be replaced and referenced via the module
