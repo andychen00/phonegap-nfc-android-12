@@ -781,7 +781,7 @@ var util = {
             cardType: bytes[0],
             appVersion: bytes[1],
             issueDate: "20" + util.byteToHex(bytes[2]) + "-" + util.byteToHex(bytes[3]) + "-" + util.byteToHex(bytes[4]),
-            expiry: byte util.byteToHex(bytes[5]) + "/" + util.byteToHex(bytes[6]),
+            expiry: util.byteToHex(bytes[5]) + "/" + util.byteToHex(bytes[6]),
             appletType: bytes[7],
             productId: (bytes[8] << 8) | bytes[9],
             flags: bytes[10]
