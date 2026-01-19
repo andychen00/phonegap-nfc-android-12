@@ -9,8 +9,8 @@
 @interface NfcPlugin() {
     NSString* sessionCallbackId;
     NSString* channelCallbackId;
-    id<NFCNDEFTag> connectedTag API_AVAILABLE(ios(13.0));
-    NFCNDEFStatus connectedTagStatus API_AVAILABLE(ios(13.0));
+    id<NFCNDEFTag> connectedTag;
+    NFCNDEFStatus connectedTagStatus;
 }
 @property (nonatomic, assign) BOOL writeMode;
 @property (nonatomic, assign) BOOL shouldUseTagReaderSession;
@@ -88,7 +88,7 @@
     [self startScanSession:command];
 }
 
-- (void)writeTag:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(13.0)){
+- (void)writeTag:(CDVInvokedUrlCommand*)command {
     NSLog(@"writeTag");
     
     self.writeMode = YES;
@@ -212,7 +212,7 @@
 }
 
 // iOS 13
-- (void) readerSession:(NFCNDEFReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCNDEFTag>> *)tags API_AVAILABLE(ios(13.0)) {
+- (void) readerSession:(NFCNDEFReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCNDEFTag>> *)tags {
     
     if (tags.count > 1) {
         session.alertMessage = @"More than 1 tag detected. Please remove all tags and try again.";
@@ -254,12 +254,12 @@
 
 #pragma mark - NFCTagReaderSessionDelegate
 
-- (void)tagReaderSessionDidBecomeActive:(NFCTagReaderSession *)session API_AVAILABLE(ios(13.0)) {
+- (void)tagReaderSessionDidBecomeActive:(NFCTagReaderSession *)session {
     NSLog(@"tagReaderSessionDidBecomeActive");
     [self sessionDidBecomeActive:session];
 }
 
-- (void)tagReaderSession:(NFCTagReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCTag>> *)tags API_AVAILABLE(ios(13.0)) {
+- (void)tagReaderSession:(NFCTagReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCTag>> *)tags {
     NSLog(@"tagReaderSession didDetectTags");
     
     if (tags.count > 1) {
@@ -286,7 +286,7 @@
     }];
 }
 
-- (void)tagReaderSession:(NFCTagReaderSession *)session didInvalidateWithError:(NSError *)error API_AVAILABLE(ios(13.0)) {
+- (void)tagReaderSession:(NFCTagReaderSession *)session didInvalidateWithError:(NSError *)error {
     NSLog(@"tagReaderSession ended");
     [self sendError:error.localizedDescription];
 }
@@ -333,11 +333,11 @@
         
 }
 
-- (void)processNDEFTag: (NFCReaderSession *)session tag:(__kindof id<NFCNDEFTag>)tag API_AVAILABLE(ios(13.0)) {
+- (void)processNDEFTag: (NFCReaderSession *)session tag:(__kindof id<NFCNDEFTag>)tag {
     [self processNDEFTag:session tag:tag metaData:[NSMutableDictionary new]];
 }
 
-- (void)processNDEFTag: (NFCReaderSession *)session tag:(__kindof id<NFCNDEFTag>)tag metaData: (NSMutableDictionary * _Nonnull)metaData API_AVAILABLE(ios(13.0)) {
+- (void)processNDEFTag: (NFCReaderSession *)session tag:(__kindof id<NFCNDEFTag>)tag metaData: (NSMutableDictionary * _Nonnull)metaData {
                             
     [tag queryNDEFStatusWithCompletionHandler:^(NFCNDEFStatus status, NSUInteger capacity, NSError * _Nullable error) {
         if (error) {
@@ -360,7 +360,7 @@
     }];
 }
 
-- (void)readNDEFTag:(NFCReaderSession * _Nonnull)session status:(NFCNDEFStatus)status tag:(id<NFCNDEFTag>)tag metaData:(NSMutableDictionary * _Nonnull)metaData  API_AVAILABLE(ios(13.0)){
+- (void)readNDEFTag:(NFCReaderSession * _Nonnull)session status:(NFCNDEFStatus)status tag:(id<NFCNDEFTag>)tag metaData:(NSMutableDictionary * _Nonnull)metaData  {
         
     if (status == NFCNDEFStatusNotSupported) {
         NSLog(@"Tag does not support NDEF");
@@ -393,7 +393,7 @@
 
 }
 
-- (void)writeNDEFTag:(NFCReaderSession * _Nonnull)session status:(NFCNDEFStatus)status tag:(id<NFCNDEFTag>)tag  API_AVAILABLE(ios(13.0)){
+- (void)writeNDEFTag:(NFCReaderSession * _Nonnull)session status:(NFCNDEFStatus)status tag:(id<NFCNDEFTag>)tag  {
     switch (status) {
         case NFCNDEFStatusNotSupported:
             [self closeSession:session withError:@"Tag is not NDEF compliant."];  // alternate message "Tag does not support NDEF."
@@ -425,7 +425,7 @@
 #pragma mark - Tag Reader Helper Functions
 
 // Gets the tag meta data - type and uid
-- (NSMutableDictionary *) getTagInfo:(id<NFCTag>)tag API_AVAILABLE(ios(13.0)) {
+- (NSMutableDictionary *) getTagInfo:(id<NFCTag>)tag {
     
     NSMutableDictionary *tagInfo = [NSMutableDictionary new];
     
