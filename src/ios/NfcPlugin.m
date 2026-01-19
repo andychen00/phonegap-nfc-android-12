@@ -18,8 +18,8 @@
 @property (nonatomic, assign) BOOL returnTagInCallback;
 @property (nonatomic, assign) BOOL returnTagInEvent;
 @property (nonatomic, assign) BOOL keepSessionOpen;
-@property (strong, nonatomic) NFCReaderSession *nfcSession API_AVAILABLE(ios(11.0));
-@property (strong, nonatomic) NFCNDEFMessage *messageToWrite API_AVAILABLE(ios(11.0));
+@property (strong, nonatomic) NFCReaderSession *nfcSession;
+@property (strong, nonatomic) NFCNDEFMessage *messageToWrite;
 @end
 
 @implementation NfcPlugin
@@ -147,7 +147,7 @@
     }
 }
 
-- (void)cancelScan:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(11.0)){
+- (void)cancelScan:(CDVInvokedUrlCommand*)command {
     NSLog(@"cancelScan");
     if (self.nfcSession) {
         [self.nfcSession invalidateSession];
@@ -202,7 +202,7 @@
 #pragma mark - NFCNDEFReaderSessionDelegate
 
 // iOS 11 & 12
-- (void) readerSession:(NFCNDEFReaderSession *)session didDetectNDEFs:(NSArray<NFCNDEFMessage *> *)messages API_AVAILABLE(ios(11.0)) {
+- (void) readerSession:(NFCNDEFReaderSession *)session didDetectNDEFs:(NSArray<NFCNDEFMessage *> *)messages {
     NSLog(@"NFCNDEFReaderSession didDetectNDEFs");
     
     session.alertMessage = @"Tag successfully read.";
@@ -237,7 +237,7 @@
     
 }
 
-- (void) readerSession:(NFCNDEFReaderSession *)session didInvalidateWithError:(NSError *)error API_AVAILABLE(ios(11.0)) {
+- (void) readerSession:(NFCNDEFReaderSession *)session didInvalidateWithError:(NSError *)error {
     NSLog(@"readerSession ended");
     if (error.code == NFCReaderSessionInvalidationErrorFirstNDEFTagRead) { // not an error
         NSLog(@"Session ended after successful NDEF tag read");
@@ -247,7 +247,7 @@
     }
 }
 
-- (void) readerSessionDidBecomeActive:(nonnull NFCReaderSession *)session API_AVAILABLE(ios(11.0)) {
+- (void) readerSessionDidBecomeActive:(nonnull NFCReaderSession *)session {
     NSLog(@"readerSessionDidBecomeActive");
     [self sessionDidBecomeActive:session];
 }
@@ -475,7 +475,7 @@
     }
 }
 
-- (void) sessionDidBecomeActive:(NFCReaderSession *) session  API_AVAILABLE(ios(11.0)){
+- (void) sessionDidBecomeActive:(NFCReaderSession *) session {
     if (sessionCallbackId && self.sendCallbackOnSessionStart) {
         CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
         [pluginResult setKeepCallback:@YES];
@@ -483,7 +483,7 @@
     }
 }
 
-- (void) closeSession:(NFCReaderSession *) session  API_AVAILABLE(ios(11.0)){
+- (void) closeSession:(NFCReaderSession *) session  {
 
     // this is a hack to keep a read session open to allow writing
     if (self.keepSessionOpen) {
@@ -497,7 +497,7 @@
     [session invalidateSession];
 }
 
-- (void) closeSession:(NFCReaderSession *) session withError:(NSString *) errorMessage  API_AVAILABLE(ios(11.0)){
+- (void) closeSession:(NFCReaderSession *) session withError:(NSString *) errorMessage  {
     [self sendError:errorMessage];
 
     // kill the callback so Cordova doesn't get "Session invalidated by user"
@@ -512,17 +512,17 @@
     }
 }
 
--(void) fireTagEvent:(NSDictionary *)metaData API_AVAILABLE(ios(11.0)) {
+-(void) fireTagEvent:(NSDictionary *)metaData {
     // Data is from a tag, but still ends up as an NDEF event in Javascript
     [self fireNdefEvent:nil metaData:metaData];
 }
 
--(void) fireNdefEvent:(NFCNDEFMessage *) ndefMessage API_AVAILABLE(ios(11.0)) {
+-(void) fireNdefEvent:(NFCNDEFMessage *) ndefMessage {
     [self fireNdefEvent:ndefMessage metaData:nil];
 }
 
 // TODO rename method since we're using the channel or callback instead of firing an event
--(void) fireNdefEvent:(NFCNDEFMessage *) ndefMessage metaData:(NSDictionary *)metaData API_AVAILABLE(ios(11.0)) {
+-(void) fireNdefEvent:(NFCNDEFMessage *) ndefMessage metaData:(NSDictionary *)metaData {
     NSLog(@"fireNdefEvent");
     
     NSMutableDictionary *nfcEvent = [NSMutableDictionary new];
@@ -548,7 +548,7 @@
 
 // NSDictionary representing an NFC tag
 // NSData fields are converted to uint8_t arrays
--(NSDictionary *) buildTagDictionary:(NFCNDEFMessage *) ndefMessage metaData: (NSDictionary *)metaData API_AVAILABLE(ios(11.0)) {
+-(NSDictionary *) buildTagDictionary:(NFCNDEFMessage *) ndefMessage metaData: (NSDictionary *)metaData {
     
     NSMutableDictionary *dictionary = [NSMutableDictionary new];
     
@@ -575,7 +575,7 @@
     return [dictionary copy];
 }
 
--(NSDictionary *) ndefRecordToNSDictionary:(NFCNDEFPayload *) ndefRecord API_AVAILABLE(ios(11.0)) {
+-(NSDictionary *) ndefRecordToNSDictionary:(NFCNDEFPayload *) ndefRecord {
     NSMutableDictionary *dict = [NSMutableDictionary new];
     dict[@"tnf"] = [NSNumber numberWithInt:(int)ndefRecord.typeNameFormat];
     dict[@"type"] = [self uint8ArrayFromNSData: ndefRecord.type];
