@@ -967,7 +967,11 @@ nfc.getCardData = async function(tag) {
 
     var info = await nfc.sendApdu("Card Info","00B300003F");
     var hexRaw = util.bytesToHexString(info);
-    var cardNumberHex = hexRaw.substring(0, 4) + " " + hexRaw.substring(4,4) + " " + hexRaw.substring(8,4) + " " + hexRaw.substring(12,4);
+    var cardNumberHex = 
+        hexRaw.substring(0, 4) + " " +
+        hexRaw.substring(4, 8) + " " +
+        hexRaw.substring(8, 12) + " " +
+        hexRaw.substring(12, 16);
 
     var bal = await nfc.sendApdu("Last Balance","00B500000A");
     var balParsed = util.parseBalance(bal);
