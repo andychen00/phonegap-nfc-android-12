@@ -954,57 +954,42 @@ nfc.parseCardAttribute = util.parseCardAttribute;
 nfc.parseBalance = util.parseBalance;
 nfc.sendApdu = util.sendApdu;
 
-nfc.getNFCCard = async function () {
+nfc.getCardData = async function(tag) {
+    var log = "";
+    var tagId = [];
+    for (var i = tag.id.length - 1; i >= 0; i--) tagId.push(tag.id[i]);
+    var uidFromAndroid = nfc.bytesToHexString(tagId);
 
-    return new Promise(async (resolve, reject) => {
-        try {
-            console.log("getNFCCard: enable reader mode");
+    await nfc.connect("android.nfc.tech.IsoDep", 5000);
 
-            var flags = nfc.FLAG_READER_NFC_A | nfc.FLAG_READER_SKIP_NDEF_CHECK;
+    function addlog(name, hexCmd, hex){
+        log += name + "\nCMD: " + hexCmd + "\nRESP: " + hex + "\n\n";
+    }
 
-            nfc.readerMode(flags, async function (tag) {
+    var select = await nfc.sendApdu("Select eMoney","00A40400080000000000000001");
+    addlog("Select eMoney", "00A40400080000000000000001", util.bytesToHexString(select));
 
-                console.log("TAG DETECTED");
+    var attr = await nfc.sendApdu("Card Attribute","00F210000B");
+    addlog("Card Attribute", "00F210000B", util.bytesToHexString(attr));
 
-                try {
-                    // ====== COPY PASTE DARI OS ======
+    var info = await nfc.sendApdu("Card Info","00B300003F");
+    var hexRaw = util.bytesToHexString(info);
+    var cardNumberHex = hexRaw.substr(0, 4) + " " + hexRaw.substr(4,4) + " " + hexRaw.substr(8,4) + " " + hexRaw.substr(12,4);
+    addlog("Card Info", "00B300003F", hexRaw);
 
-                    var tagId = [];
-                    for (var i = tag.id.length - 1; i >= 0; i--) tagId.push(tag.id[i]);
-                    var uidFromAndroid = nfc.bytesToHexString(tagId);
+    var bal = await nfc.sendApdu("Last Balance","00B500000A");
+    var balParsed = util.parseBalance(bal);
+    addlog("Last Balance","00B500000A", util.bytesToHexString(bal));
 
-                    await nfc.connect("android.nfc.tech.IsoDep", 5000);
+    await nfc.close();
 
-                    var select = await nfc.sendApdu("Select eMoney", "00A40400080000000000000001");
-                    var attr   = await nfc.sendApdu("Card Attribute", "00F210000B");
-                    var info   = await nfc.sendApdu("Card Info", "00B300003F");
-                    var bal    = await nfc.sendApdu("Last Balance", "00B500000A");
-
-                    var balParsed = nfc.parseBalance(bal);
-
-                    await nfc.close();
-
-                    resolve({
-                        uid: uidFromAndroid,
-                        balance: balParsed.balance,
-                        rawBalance: balParsed
-                    });
-
-                } catch (e) {
-                    try { await nfc.close(); } catch (_) {}
-                    reject(e);
-                }
-
-            }, reject);
-
-        } catch (err) {
-            reject(err);
-        }
-    });
+    return {
+        uid: uidFromAndroid,
+        cardNumber: cardNumberHex,
+        balance: balParsed.balance,
+        log: log
+    };
 };
-
-
-
 
 // kludge some global variables for plugman js-module support
 // eventually these should be replaced and referenced via the module
