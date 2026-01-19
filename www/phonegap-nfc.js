@@ -975,11 +975,11 @@ nfc.getCardData = async function(tag) {
     await nfc.close();
 
     return {
-        selectEmoney: select,
-        cardAttribute: attr,
+        selectEmoney: nfc.bytesToHexString(select),
+        cardAttribute: nfc.bytesToHexString(attr),
         cardUID: uidFromAndroid,
-        cardInfo: info,
-        lastbalance: bal,
+        cardInfo: nfc.bytesToHexString(info),
+        lastbalance: nfc.bytesToHexString(bal),
         cardNumber: cardNumberHex,
         balance: balParsed.balance,
     };
