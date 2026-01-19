@@ -9,9 +9,8 @@
 @interface NfcPlugin() {
     NSString* sessionCallbackId;
     NSString* channelCallbackId;
-    id connectedTag;
-    NSInteger connectedTagStatus;
-
+    id<NFCNDEFTag> connectedTag API_AVAILABLE(ios(13.0));
+    NFCNDEFStatus connectedTagStatus API_AVAILABLE(ios(13.0));
 }
 @property (nonatomic, assign) BOOL writeMode;
 @property (nonatomic, assign) BOOL shouldUseTagReaderSession;
@@ -19,7 +18,7 @@
 @property (nonatomic, assign) BOOL returnTagInCallback;
 @property (nonatomic, assign) BOOL returnTagInEvent;
 @property (nonatomic, assign) BOOL keepSessionOpen;
-@property (strong, nonatomic) NSObject *nfcSession API_AVAILABLE(ios(11.0));
+@property (strong, nonatomic) NFCReaderSession *nfcSession API_AVAILABLE(ios(11.0));
 @property (strong, nonatomic) NFCNDEFMessage *messageToWrite API_AVAILABLE(ios(11.0));
 @end
 
@@ -126,9 +125,10 @@
         if (self.shouldUseTagReaderSession) {
             NSLog(@"Using NFCTagReaderSession");
 
-            self.nfcSession = [[NFCTagReaderSession new]
-                       initWithPollingOption:(NFCPollingISO14443 | NFCPollingISO15693)
-                       delegate:self queue:dispatch_get_main_queue()];
+            // self.nfcSession = [[NFCTagReaderSession new]
+            //            initWithPollingOption:(NFCPollingISO14443 | NFCPollingISO15693)
+            //            delegate:self queue:dispatch_get_main_queue()];
+            self.nfcSession = [[NFCTagReaderSession alloc] initWithPollingOption:NFCPollingISO14443 delegate:self queue:nil];
 
         } else {
             NSLog(@"Using NFCTagReaderSession");
@@ -141,11 +141,7 @@
 
     if (reusingSession) {                   // reusing a read session to write
         self.keepSessionOpen = NO;          // close session after writing
-        if (@available(iOS 13.0, *)) {
-            [self writeNDEFTag:self.nfcSession
-                status:(NFCNDEFStatus)connectedTagStatus
-                   tag:(id<NFCNDEFTag>)connectedTag];
-        }
+        [self writeNDEFTag:self.nfcSession status:connectedTagStatus tag:connectedTag];
     } else {
         [self.nfcSession beginSession];
     }
@@ -312,7 +308,7 @@
         if (self.shouldUseTagReaderSession) {
             NSLog(@"Using NFCTagReaderSession");
             self.nfcSession = [[NFCTagReaderSession new]
-                           initWithPollingOption:(NFCPollingISO14443 | NFCPollingISO15693)
+                           initWithPollingOption:(NFCPollingISO14443 | NFCPollingISO15693 | NFCPollingISO18092)
                            delegate:self queue:dispatch_get_main_queue()];
         } else {
             NSLog(@"Using NFCNDEFReaderSession");
@@ -355,8 +351,8 @@
         } else {
             // save tag & status so we can re-use in write
             if (self.keepSessionOpen) {
-                self->connectedTagStatus = (NSInteger)status;
-                self->connectedTag = (id)tag;
+                self->connectedTagStatus = status;
+                self->connectedTag = tag;
             }
             [self readNDEFTag:session status:status tag:tag metaData:metaData];
         }
@@ -496,13 +492,9 @@
 
     // kill the callback so the Cordova doesn't get "Session invalidated by user"
     sessionCallbackId = NULL;
-    connectedTag = nil;
-    connectedTagStatus = 0;
-
-    if ([session respondsToSelector:@selector(invalidateSession)]) {
-        [session invalidateSession];
-    }
-
+    connectedTag = NULL;
+    connectedTagStatus = NFCNDEFStatusNotSupported;
+    [session invalidateSession];
 }
 
 - (void) closeSession:(NFCReaderSession *) session withError:(NSString *) errorMessage  API_AVAILABLE(ios(11.0)){

@@ -7,8 +7,9 @@
 #ifndef NfcPlugin_h
 #define NfcPlugin_h
 
-#import <Cordova/CDVPlugin.h>
+#import <Cordova/CDV.h>
 #import <CoreNFC/CoreNFC.h>
+#import <WebKit/WebKit.h>
 
 @interface NfcPlugin : CDVPlugin <NFCNDEFReaderSessionDelegate, NFCTagReaderSessionDelegate> {
 }
@@ -29,7 +30,7 @@
 - (void)registerNdef:(CDVInvokedUrlCommand *)command;
 - (void)removeNdef:(CDVInvokedUrlCommand *)command;
 - (void)enabled:(CDVInvokedUrlCommand *)command;
-- (void)writeTag:(CDVInvokedUrlCommand *)command API_AVAILABLE(ios(13.0));
+- (void)writeTag:(CDVInvokedUrlCommand *)command;
 
 // Internal implementation
 - (void)channel:(CDVInvokedUrlCommand *)command;
