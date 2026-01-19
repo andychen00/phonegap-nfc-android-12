@@ -960,64 +960,83 @@ nfc.sendApdu = util.sendApdu;
  * Android only
  */
 nfc.getNFCCard = function () {
+
     return new Promise(function (resolve, reject) {
 
-        if (cordova.platformId !== "android") {
-            reject("getNFCCard only supported on Android");
-            return;
+        var log = "";
+
+        function addLog(name, cmd, resp) {
+            log += name + "\n";
+            log += "CMD : " + cmd + "\n";
+            log += "RESP: " + resp + "\n\n";
         }
 
-        function onTagDiscovered(tag) {
-            (async function () {
-                try {
-                    if (!tag.techTypes || !tag.techTypes.includes("android.nfc.tech.IsoDep")) {
-                        throw "Tag bukan IsoDep";
-                    }
+        function onTag(tag) {
 
-                    await nfc.connect("android.nfc.tech.IsoDep", 5000);
+            if (!tag.techTypes || tag.techTypes.indexOf("android.nfc.tech.IsoDep") === -1) {
+                reject("Not IsoDep");
+                return;
+            }
 
-                    // SELECT eMoney
-                    await nfc.sendApdu("Select eMoney", "00A40400080000000000000001");
+            var uid = nfc.bytesToHexString(tag.id);
 
-                    // CARD INFO
-                    var info = await nfc.sendApdu("Card Info", "00B300003F");
+            nfc.connect("android.nfc.tech.IsoDep", 5000,
 
-                    // BALANCE
-                    var bal = await nfc.sendApdu("Last Balance", "00B500000A");
+                function () {
 
-                    var result = {
-                        uid: nfc.bytesToHexString(tag.id),
-                        cardNumber: nfc.bytesToHexString(info).substr(0, 16),
-                        balance: nfc.parseBalance(bal).balance
-                    };
+                    nfc.sendApdu("Select", "00A40400080000000000000001",
+                        function (select) {
 
-                    await nfc.close();
-                    nfc.disableReaderMode();
+                            addLog("Select", "00A40400080000000000000001",
+                                nfc.bytesToHexString(select));
 
-                    document.removeEventListener("tag", onTagDiscovered);
-                    resolve(result);
+                            nfc.sendApdu("Balance", "00B500000A",
+                                function (bal) {
 
-                } catch (e) {
-                    try { await nfc.close(); } catch (x) {}
-                    nfc.disableReaderMode();
-                    document.removeEventListener("tag", onTagDiscovered);
+                                    var balParsed = nfc.parseBalance(bal);
+                                    addLog("Balance", "00B500000A",
+                                        nfc.bytesToHexString(bal));
+
+                                    nfc.close();
+                                    nfc.disableReaderMode();
+                                    document.removeEventListener("tag", onTag);
+
+                                    resolve({
+                                        uid: uid,
+                                        balance: balParsed.balance,
+                                        log: log
+                                    });
+
+                                },
+                                function (e) {
+                                    reject(e);
+                                }
+                            );
+                        },
+                        function (e) {
+                            reject(e);
+                        }
+                    );
+                },
+
+                function (e) {
                     reject(e);
                 }
-            })();
+            );
         }
 
-        document.addEventListener("tag", onTagDiscovered);
+        document.addEventListener("tag", onTag);
 
         nfc.readerMode(
             nfc.FLAG_READER_NFC_A | nfc.FLAG_READER_SKIP_NDEF_CHECK,
             function () {},
             function (e) {
-                document.removeEventListener("tag", onTagDiscovered);
                 reject(e);
             }
         );
     });
 };
+
 
 
 // kludge some global variables for plugman js-module support
