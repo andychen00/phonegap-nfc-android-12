@@ -977,7 +977,7 @@ nfc.getCardData = async function(tag) {
     return {
         selectEmoney: select,
         cardAttribute: attr,
-        CardUID: uidFromAndroid,
+        cardUID: uidFromAndroid,
         cardInfo: info,
         lastbalance: bal,
         cardNumber: cardNumberHex,
