@@ -955,39 +955,33 @@ nfc.parseBalance = util.parseBalance;
 nfc.sendApdu = util.sendApdu;
 
 nfc.getCardData = async function(tag) {
-    var log = "";
     var tagId = [];
     for (var i = tag.id.length - 1; i >= 0; i--) tagId.push(tag.id[i]);
     var uidFromAndroid = nfc.bytesToHexString(tagId);
 
     await nfc.connect("android.nfc.tech.IsoDep", 5000);
 
-    function addlog(name, hexCmd, hex){
-        log += name + "\nCMD: " + hexCmd + "\nRESP: " + hex + "\n\n";
-    }
-
     var select = await nfc.sendApdu("Select eMoney","00A40400080000000000000001");
-    addlog("Select eMoney", "00A40400080000000000000001", util.bytesToHexString(select));
 
     var attr = await nfc.sendApdu("Card Attribute","00F210000B");
-    addlog("Card Attribute", "00F210000B", util.bytesToHexString(attr));
 
     var info = await nfc.sendApdu("Card Info","00B300003F");
     var hexRaw = util.bytesToHexString(info);
-    var cardNumberHex = hexRaw.substr(0, 4) + " " + hexRaw.substr(4,4) + " " + hexRaw.substr(8,4) + " " + hexRaw.substr(12,4);
-    addlog("Card Info", "00B300003F", hexRaw);
+    var cardNumberHex = hexRaw.substring(0, 4) + " " + hexRaw.substring(4,4) + " " + hexRaw.substring(8,4) + " " + hexRaw.substring(12,4);
 
     var bal = await nfc.sendApdu("Last Balance","00B500000A");
     var balParsed = util.parseBalance(bal);
-    addlog("Last Balance","00B500000A", util.bytesToHexString(bal));
 
     await nfc.close();
 
     return {
-        uid: uidFromAndroid,
+        selectEmoney: select,
+        cardAttribute: attr,
+        CardUID: uidFromAndroid,
+        cardInfo: info,
+        lastbalance: bal,
         cardNumber: cardNumberHex,
         balance: balParsed.balance,
-        log: log
     };
 };
 
