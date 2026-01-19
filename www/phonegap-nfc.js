@@ -989,6 +989,108 @@ nfc.getCardData = async function(tag) {
     };
 };
 
+// TAMBAH INI DI AKHIR FILE, SEBELUM: window.nfc = nfc;
+
+if (cordova.platformId === "ios") {
+    console.log("iOS NFC mode activated");
+    
+    // Simpan fungsi Android
+    var androidGetCardData = nfc.getCardData;
+    
+    // Override untuk iOS
+    nfc.getCardData = async function(tag) {
+        console.log("iOS: Reading e-money card");
+        
+        try {
+            // 1. Mulai NFC session
+            await new Promise(function(resolve, reject) {
+                cordova.exec(
+                    function(tagInfo) {
+                        console.log("iOS tag connected:", tagInfo);
+                        resolve(tagInfo);
+                    },
+                    reject,
+                    "NfcPlugin",
+                    "connectIOS",
+                    ["Tempelkan kartu e-money"]
+                );
+            });
+            
+            // 2. Kirim APDU commands (INI DI JAVASCRIPT!)
+            function sendIOSApdu(apduHex) {
+                return new Promise(function(resolve, reject) {
+                    cordova.exec(
+                        function(response) {
+                            // Response dari Swift: hex string
+                            var buffer = util.hexStringToArrayBuffer(response);
+                            resolve(buffer);
+                        },
+                        reject,
+                        "NfcPlugin",
+                        "sendAPDUIOS",
+                        [apduHex]
+                    );
+                });
+            }
+            
+            // 3. SEQUENCE APDU DI SINI (JavaScript)
+            var select = await sendIOSApdu("00A40400080000000000000001");
+            var attr = await sendIOSApdu("00F210000B");
+            var info = await sendIOSApdu("00B300003F");
+            var bal = await sendIOSApdu("00B500000A");
+            
+            // 4. Close session
+            await new Promise(function(resolve) {
+                cordova.exec(resolve, null, "NfcPlugin", "closeIOS", []);
+            });
+            
+            // 5. Parse response (sama kaya Android)
+            var hexRaw = util.bytesToHexString(info);
+            var cardNumberHex = 
+                hexRaw.substring(0, 4) + " " +
+                hexRaw.substring(4, 8) + " " +
+                hexRaw.substring(8, 12) + " " +
+                hexRaw.substring(12, 16);
+                
+            var balParsed = util.parseBalance(bal);
+            
+            // Buat mock UID (atau bisa dari tag parameter)
+            var uid = tag && tag.id ? 
+                nfc.bytesToHexString(tag.id) : 
+                "04000000000000";
+            
+            return {
+                selectEmoney: util.bytesToHexString(select),
+                cardAttribute: util.bytesToHexString(attr),
+                cardUID: uid,
+                cardInfo: util.bytesToHexString(info),
+                lastbalance: util.bytesToHexString(bal),
+                cardNumber: cardNumberHex,
+                balance: balParsed ? balParsed.balance : 0,
+                platform: "ios"
+            };
+            
+        } catch (error) {
+            console.error("iOS NFC error:", error);
+            throw error;
+        }
+    };
+    
+    // Mock readerMode untuk iOS
+    nfc.readerMode = function(flags, callback) {
+        console.log("iOS mock readerMode");
+        // Langsung panggil getCardData
+        nfc.getCardData({ 
+            id: [0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
+            techTypes: ["android.nfc.tech.IsoDep"] 
+        }).then(function(card) {
+            callback({ id: card.cardUID.match(/.{2}/g).map(h => parseInt(h, 16)) });
+        }).catch(function(err) {
+            console.error("Mock error:", err);
+        });
+    };
+}
+
 // kludge some global variables for plugman js-module support
 // eventually these should be replaced and referenced via the module
 window.nfc = nfc;
