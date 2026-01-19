@@ -954,88 +954,55 @@ nfc.parseCardAttribute = util.parseCardAttribute;
 nfc.parseBalance = util.parseBalance;
 nfc.sendApdu = util.sendApdu;
 
-/**
- * High-level API
- * Scan IsoDep card and return parsed data
- * Android only
- */
-nfc.getNFCCard = function () {
+nfc.getNFCCard = async function () {
 
-    return new Promise(function (resolve, reject) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            console.log("getNFCCard: enable reader mode");
 
-        var log = "";
+            var flags = nfc.FLAG_READER_NFC_A | nfc.FLAG_READER_SKIP_NDEF_CHECK;
 
-        function addLog(name, cmd, resp) {
-            log += name + "\n";
-            log += "CMD : " + cmd + "\n";
-            log += "RESP: " + resp + "\n\n";
-        }
+            nfc.readerMode(flags, async function (tag) {
 
-        function onTag(tag) {
+                console.log("TAG DETECTED");
 
-            if (!tag.techTypes || tag.techTypes.indexOf("android.nfc.tech.IsoDep") === -1) {
-                reject("Not IsoDep");
-                return;
-            }
+                try {
+                    // ====== COPY PASTE DARI OS ======
 
-            var uid = nfc.bytesToHexString(tag.id);
+                    var tagId = [];
+                    for (var i = tag.id.length - 1; i >= 0; i--) tagId.push(tag.id[i]);
+                    var uidFromAndroid = nfc.bytesToHexString(tagId);
 
-            nfc.connect("android.nfc.tech.IsoDep", 5000,
+                    await nfc.connect("android.nfc.tech.IsoDep", 5000);
 
-                function () {
+                    var select = await nfc.sendApdu("Select eMoney", "00A40400080000000000000001");
+                    var attr   = await nfc.sendApdu("Card Attribute", "00F210000B");
+                    var info   = await nfc.sendApdu("Card Info", "00B300003F");
+                    var bal    = await nfc.sendApdu("Last Balance", "00B500000A");
 
-                    nfc.sendApdu("Select", "00A40400080000000000000001",
-                        function (select) {
+                    var balParsed = nfc.parseBalance(bal);
 
-                            addLog("Select", "00A40400080000000000000001",
-                                nfc.bytesToHexString(select));
+                    await nfc.close();
 
-                            nfc.sendApdu("Balance", "00B500000A",
-                                function (bal) {
+                    resolve({
+                        uid: uidFromAndroid,
+                        balance: balParsed.balance,
+                        rawBalance: balParsed
+                    });
 
-                                    var balParsed = nfc.parseBalance(bal);
-                                    addLog("Balance", "00B500000A",
-                                        nfc.bytesToHexString(bal));
-
-                                    nfc.close();
-                                    nfc.disableReaderMode();
-                                    document.removeEventListener("tag", onTag);
-
-                                    resolve({
-                                        uid: uid,
-                                        balance: balParsed.balance,
-                                        log: log
-                                    });
-
-                                },
-                                function (e) {
-                                    reject(e);
-                                }
-                            );
-                        },
-                        function (e) {
-                            reject(e);
-                        }
-                    );
-                },
-
-                function (e) {
+                } catch (e) {
+                    try { await nfc.close(); } catch (_) {}
                     reject(e);
                 }
-            );
+
+            }, reject);
+
+        } catch (err) {
+            reject(err);
         }
-
-        document.addEventListener("tag", onTag);
-
-        nfc.readerMode(
-            nfc.FLAG_READER_NFC_A | nfc.FLAG_READER_SKIP_NDEF_CHECK,
-            function () {},
-            function (e) {
-                reject(e);
-            }
-        );
     });
 };
+
 
 
 
