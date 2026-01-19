@@ -954,6 +954,72 @@ nfc.parseCardAttribute = util.parseCardAttribute;
 nfc.parseBalance = util.parseBalance;
 nfc.sendApdu = util.sendApdu;
 
+/**
+ * High-level API
+ * Scan IsoDep card and return parsed data
+ * Android only
+ */
+nfc.getNFCCard = function () {
+    return new Promise(function (resolve, reject) {
+
+        if (cordova.platformId !== "android") {
+            reject("getNFCCard only supported on Android");
+            return;
+        }
+
+        function onTagDiscovered(tag) {
+            (async function () {
+                try {
+                    if (!tag.techTypes || !tag.techTypes.includes("android.nfc.tech.IsoDep")) {
+                        throw "Tag bukan IsoDep";
+                    }
+
+                    await nfc.connect("android.nfc.tech.IsoDep", 5000);
+
+                    // SELECT eMoney
+                    await nfc.sendApdu("Select eMoney", "00A40400080000000000000001");
+
+                    // CARD INFO
+                    var info = await nfc.sendApdu("Card Info", "00B300003F");
+
+                    // BALANCE
+                    var bal = await nfc.sendApdu("Last Balance", "00B500000A");
+
+                    var result = {
+                        uid: nfc.bytesToHexString(tag.id),
+                        cardNumber: nfc.bytesToHexString(info).substr(0, 16),
+                        balance: nfc.parseBalance(bal).balance
+                    };
+
+                    await nfc.close();
+                    nfc.disableReaderMode();
+
+                    document.removeEventListener("tag", onTagDiscovered);
+                    resolve(result);
+
+                } catch (e) {
+                    try { await nfc.close(); } catch (x) {}
+                    nfc.disableReaderMode();
+                    document.removeEventListener("tag", onTagDiscovered);
+                    reject(e);
+                }
+            })();
+        }
+
+        document.addEventListener("tag", onTagDiscovered);
+
+        nfc.readerMode(
+            nfc.FLAG_READER_NFC_A | nfc.FLAG_READER_SKIP_NDEF_CHECK,
+            function () {},
+            function (e) {
+                document.removeEventListener("tag", onTagDiscovered);
+                reject(e);
+            }
+        );
+    });
+};
+
+
 // kludge some global variables for plugman js-module support
 // eventually these should be replaced and referenced via the module
 window.nfc = nfc;
