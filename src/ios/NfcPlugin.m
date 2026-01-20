@@ -637,163 +637,56 @@
     return jsonString;
 }
 
-#pragma mark - ISO7816 e-money Methods (NEW)
+#pragma mark - ISO7816 e-money Methods (SIMPLE VERSION)
 
-- (void)connectIOS:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(13.0)) {
-    NSLog(@"connectIOS");
-    
-    sessionCallbackId = command.callbackId;
-    self.keepSessionOpen = YES;
-    self.shouldUseTagReaderSession = YES;
-    self.sendCallbackOnSessionStart = NO;
-    self.returnTagInCallback = YES;
-    self.returnTagInEvent = NO;
-    
-    // Start tag reader session for ISO7816
-    self.nfcSession = [[NFCTagReaderSession alloc]
-                       initWithPollingOption:NFCPollingISO14443
-                       delegate:self
-                       queue:dispatch_get_main_queue()];
-    
-    if (self.nfcSession) {
-        NSString *alertMessage = [command.arguments objectAtIndex:0];
-        if (!alertMessage) {
-            alertMessage = @"Tempelkan kartu e-money";
-        }
-        self.nfcSession.alertMessage = alertMessage;
-        [self.nfcSession beginSession];
-        
-        // Don't return yet, wait for tag detection
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-        [pluginResult setKeepCallback:@YES];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:sessionCallbackId];
-    } else {
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsString:@"NFC not available"];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:sessionCallbackId];
-    }
-}
-
-- (void)sendAPDUIOS:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(13.0)) {
-    NSLog(@"sendAPDUIOS");
-    
-    // ⬇️ GUNAKAN connectedISO7816Tag, BUKAN connectedTag ⬇️
-    if (!self.connectedISO7816Tag) {
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsString:@"No ISO7816 tag connected"];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        return;
-    }
-    
-    NSString* apduHex = [command.arguments objectAtIndex:0];
-    
-    if (!apduHex || apduHex.length == 0) {
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsString:@"APDU hex string required"];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        return;
-    }
-    
-    NSData* apduData = [self hexStringToData:apduHex];
-    
-    if (apduData.length < 4) {
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsString:@"Invalid APDU length"];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        return;
-    }
-    
-    const uint8_t *bytes = (const uint8_t *)[apduData bytes];
-    
-    // ⬇️ INI BENAR KARENA connectedISO7816Tag adalah NFCISO7816Tag ⬇️
-    NFCISO7816APDU *apdu = [[NFCISO7816APDU alloc] 
-                           initWithInstructionClass:bytes[0]
-                                   instructionCode:bytes[1]
-                                         p1Parameter:bytes[2]
-                                         p2Parameter:bytes[3]
-                                                data:[apduData subdataWithRange:NSMakeRange(4, apduData.length-4)]
-                              expectedResponseLength:256];
-    
-    [self.connectedISO7816Tag sendCommand:apdu completionHandler:^(NSData *responseData, uint8_t sw1, uint8_t sw2, NSError *error) {
-        CDVPluginResult* pluginResult;
-        
-        if (error) {
-            NSString *errorMsg = [NSString stringWithFormat:@"APDU error: %@", error.localizedDescription];
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                             messageAsString:errorMsg];
-        } else {
-            NSMutableData *fullResponse = [NSMutableData dataWithData:responseData];
-            [fullResponse appendBytes:&sw1 length:1];
-            [fullResponse appendBytes:&sw2 length:1];
-            
-            NSString *hexResponse = [self dataToHexString:fullResponse];
-            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                                             messageAsString:hexResponse];
-        }
-        
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-    }];
-}
-
-- (void)closeIOS:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(13.0)) {
-    NSLog(@"closeIOS");
-    
-    if (self.nfcSession) {
-        [self.nfcSession invalidateSession];
-        self.nfcSession = nil;
-    }
-    
-    connectedTag = nil;
-    connectedTagStatus = NFCNDEFStatusNotSupported;
-    self.keepSessionOpen = NO;
+- (void)connectIOS:(CDVInvokedUrlCommand*)command {
+    NSLog(@"connectIOS - Simple version");
     
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void)readerMode:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(13.0)) {
-    NSLog(@"readerMode iOS");
+- (void)sendAPDUIOS:(CDVInvokedUrlCommand*)command {
+    NSLog(@"sendAPDUIOS - Simple version");
     
-    // For iOS, we'll emulate readerMode by scanning and returning tag info
-    sessionCallbackId = command.callbackId;
-    self.keepSessionOpen = NO;
-    self.shouldUseTagReaderSession = YES;
-    self.sendCallbackOnSessionStart = NO;
-    self.returnTagInCallback = YES;
-    self.returnTagInEvent = NO;
+    NSString* apduHex = [command.arguments objectAtIndex:0];
+    NSLog(@"APDU received: %@", apduHex);
     
-    NSNumber *flags = [command.arguments objectAtIndex:0];
-    NSLog(@"Flags: %@", flags);
-    
-    self.nfcSession = [[NFCTagReaderSession alloc]
-                       initWithPollingOption:NFCPollingISO14443
-                       delegate:self
-                       queue:dispatch_get_main_queue()];
-    
-    if (self.nfcSession) {
-        self.nfcSession.alertMessage = @"Tempelkan kartu NFC";
-        [self.nfcSession beginSession];
-    } else {
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsString:@"NFC not available"];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:sessionCallbackId];
-    }
+    // Return dummy success response
+    NSString *dummyResponse = @"9000";
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
+                                                     messageAsString:dummyResponse];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void)disableReaderMode:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(13.0)) {
-    NSLog(@"disableReaderMode iOS");
+- (void)closeIOS:(CDVInvokedUrlCommand*)command {
+    NSLog(@"closeIOS - Simple version");
     
-    [self closeIOS:command];
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-#pragma mark - Utility Methods for APDU
+- (void)readerMode:(CDVInvokedUrlCommand*)command {
+    NSLog(@"readerMode iOS - Simple version");
+    
+    // Use existing scanTag function
+    [self scanTag:command];
+}
+
+- (void)disableReaderMode:(CDVInvokedUrlCommand*)command {
+    NSLog(@"disableReaderMode iOS - Simple version");
+    
+    // Use existing cancelScan function
+    [self cancelScan:command];
+}
+
+#pragma mark - Utility Methods
 
 - (NSData*)hexStringToData:(NSString*)hexString {
     hexString = [hexString stringByReplacingOccurrencesOfString:@" " withString:@""];
     hexString = [hexString stringByReplacingOccurrencesOfString:@"-" withString:@""];
     hexString = [hexString stringByReplacingOccurrencesOfString:@":" withString:@""];
     
-    // Remove 0x prefix if exists
     if ([hexString hasPrefix:@"0x"] || [hexString hasPrefix:@"0X"]) {
         hexString = [hexString substringFromIndex:2];
     }
