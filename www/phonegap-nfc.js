@@ -1076,6 +1076,7 @@ if (cordova.platformId === "ios") {
         }
     };
     
+    
     // Mock readerMode untuk iOS
     nfc.readerMode = function(flags, callback) {
         console.log("iOS mock readerMode");
