@@ -535,14 +535,36 @@ var nfc = {
     // connect to begin transceive
     connect: function(tech, timeout) {
         return new Promise(function(resolve, reject) {
-            cordova.exec(resolve, reject, 'NfcPlugin', 'connect', [tech, timeout]);
+            if (cordova.platformId === "ios") {
+                // iOS implementation
+                cordova.exec(
+                    function(tagInfo) {
+                        console.log("iOS connected to tag:", tagInfo);
+                        resolve({
+                            id: tagInfo.id || [],
+                            techTypes: ["NFCTagTypeISO7816Compatible"]
+                        });
+                    },
+                    reject,
+                    "NfcPlugin",
+                    "connectIOS",
+                    ["Tempelkan kartu e-money"]
+                );
+            } else {
+                // Android original
+                cordova.exec(resolve, reject, 'NfcPlugin', 'connect', [tech, timeout]);
+            }
         });
     },
 
     // close transceive connection
     close: function() {
         return new Promise(function(resolve, reject) {
-            cordova.exec(resolve, reject, 'NfcPlugin', 'close', []);
+            if (cordova.platformId === "ios") {
+                cordova.exec(resolve, reject, "NfcPlugin", "closeIOS", []);
+            } else {
+                cordova.exec(resolve, reject, 'NfcPlugin', 'close', []);
+            }
         });
     },
 
@@ -551,18 +573,38 @@ var nfc = {
     transceive: function(data) {
         return new Promise(function(resolve, reject) {
 
-            var buffer;
+            var buffer, hexString;
             if (typeof data === 'string') {
                 buffer = util.hexStringToArrayBuffer(data);
+                hexString = data;
             } else if (data instanceof ArrayBuffer) {
                 buffer = data;
+                hexString = util.arrayBufferToHexString(data);
             } else if (data instanceof Uint8Array) {
                 buffer = data.buffer;
+                hexString = util.arrayBufferToHexString(data.buffer);
             } else {
                 reject("Expecting an ArrayBuffer or String");
+                return;
             }
 
-            cordova.exec(resolve, reject, 'NfcPlugin', 'transceive', [buffer]);
+            if (cordova.platformId === "ios") {
+                // iOS implementation - send APDU via Core NFC
+                cordova.exec(
+                    function(responseHex) {
+                        // Convert hex string back to ArrayBuffer
+                        var buffer = util.hexStringToArrayBuffer(responseHex);
+                        resolve(buffer);
+                    },
+                    reject,
+                    "NfcPlugin",
+                    "sendAPDUIOS",
+                    [hexString]
+                );
+            } else {
+                // Android original
+                cordova.exec(resolve, reject, 'NfcPlugin', 'transceive', [buffer]);
+            }
         });
     },
 
@@ -577,11 +619,39 @@ var nfc = {
     
     // Android NfcAdapter.enabledReaderMode
     readerMode: function(flags, readCallback, errorCallback) {
-        cordova.exec(readCallback, errorCallback, 'NfcPlugin', 'readerMode', [flags]);
+        if (cordova.platformId === "ios") {
+            // iOS emulation - use scanTag with callback
+            cordova.exec(
+                function(tagInfo) {
+                    // iOS returns tag metadata
+                    if (readCallback) {
+                        // Format similar to Android
+                        var androidStyleEvent = {
+                            tag: {
+                                id: tagInfo.id || [],
+                                techTypes: tagInfo.type ? [tagInfo.type] : []
+                            }
+                        };
+                        readCallback(androidStyleEvent);
+                    }
+                },
+                errorCallback,
+                "NfcPlugin",
+                "readerMode",
+                [flags]
+            );
+        } else {
+            // Android original
+            cordova.exec(readCallback, errorCallback, 'NfcPlugin', 'readerMode', [flags]);
+        }
     },
 
     disableReaderMode: function(successCallback, errorCallback) {
-        cordova.exec(successCallback, errorCallback, 'NfcPlugin', 'disableReaderMode', []);
+        if (cordova.platformId === "ios") {
+            cordova.exec(successCallback, errorCallback, "NfcPlugin", "disableReaderMode", []);
+        } else {
+            cordova.exec(successCallback, errorCallback, 'NfcPlugin', 'disableReaderMode', []);
+        }
     }
 
 };
@@ -955,142 +1025,72 @@ nfc.parseBalance = util.parseBalance;
 nfc.sendApdu = util.sendApdu;
 
 nfc.getCardData = async function(tag) {
-    var tagId = [];
-    for (var i = tag.id.length - 1; i >= 0; i--) tagId.push(tag.id[i]);
-    var uidFromAndroid = nfc.bytesToHexString(tagId);
-
-    await nfc.connect("android.nfc.tech.IsoDep", 5000);
-
-    var select = await nfc.sendApdu("Select eMoney","00A40400080000000000000001");
-
-    var attr = await nfc.sendApdu("Card Attribute","00F210000B");
-
-    var info = await nfc.sendApdu("Card Info","00B300003F");
-    var hexRaw = util.bytesToHexString(info);
-    var cardNumberHex = 
-        hexRaw.substring(0, 4) + " " +
-        hexRaw.substring(4, 8) + " " +
-        hexRaw.substring(8, 12) + " " +
-        hexRaw.substring(12, 16);
-
-    var bal = await nfc.sendApdu("Last Balance","00B500000A");
-    var balParsed = util.parseBalance(bal);
-
-    await nfc.close();
-
-    return {
-        selectEmoney: nfc.bytesToHexString(select),
-        cardAttribute: nfc.bytesToHexString(attr),
-        cardUID: uidFromAndroid,
-        cardInfo: nfc.bytesToHexString(info),
-        lastbalance: nfc.bytesToHexString(bal),
-        cardNumber: cardNumberHex,
-        balance: balParsed.balance,
-    };
-};
-
-// TAMBAH INI DI AKHIR FILE, SEBELUM: window.nfc = nfc;
-
-if (cordova.platformId === "ios") {
-    console.log("iOS NFC mode activated");
-    
-    // Simpan fungsi Android
-    var androidGetCardData = nfc.getCardData;
-    
-    // Override untuk iOS
-    nfc.getCardData = async function(tag) {
-        console.log("iOS: Reading e-money card");
+        console.log("Reading e-money card on platform:", cordova.platformId);
         
         try {
-            // 1. Mulai NFC session
-            await new Promise(function(resolve, reject) {
-                cordova.exec(
-                    function(tagInfo) {
-                        console.log("iOS tag connected:", tagInfo);
-                        resolve(tagInfo);
-                    },
-                    reject,
-                    "NfcPlugin",
-                    "connectIOS",
-                    ["Tempelkan kartu e-money"]
-                );
-            });
-            
-            // 2. Kirim APDU commands (INI DI JAVASCRIPT!)
-            function sendIOSApdu(apduHex) {
-                return new Promise(function(resolve, reject) {
-                    cordova.exec(
-                        function(response) {
-                            // Response dari Swift: hex string
-                            var buffer = util.hexStringToArrayBuffer(response);
-                            resolve(buffer);
-                        },
-                        reject,
-                        "NfcPlugin",
-                        "sendAPDUIOS",
-                        [apduHex]
-                    );
-                });
+            // Connect based on platform
+            if (cordova.platformId === "ios") {
+                // iOS - use NFCTagTypeISO7816Compatible
+                await this.connect("NFCTagTypeISO7816Compatible", 5000);
+            } else {
+                // Android - use android.nfc.tech.IsoDep
+                await this.connect("android.nfc.tech.IsoDep", 5000);
             }
             
-            // 3. SEQUENCE APDU DI SINI (JavaScript)
-            var select = await sendIOSApdu("00A40400080000000000000001");
-            var attr = await sendIOSApdu("00F210000B");
-            var info = await sendIOSApdu("00B300003F");
-            var bal = await sendIOSApdu("00B500000A");
+            // SAME APDU sequence for both platforms
+            var select = await this.transceive("00A40400080000000000000001");
+            var attr = await this.transceive("00F210000B");
+            var info = await this.transceive("00B300003F");
+            var bal = await this.transceive("00B500000A");
             
-            // 4. Close session
-            await new Promise(function(resolve) {
-                cordova.exec(resolve, null, "NfcPlugin", "closeIOS", []);
-            });
+            // Close connection
+            await this.close();
             
-            // 5. Parse response (sama kaya Android)
-            var hexRaw = util.bytesToHexString(info);
+            // Parse responses
+            var selectHex = util.arrayBufferToHexString(select);
+            var attrHex = util.arrayBufferToHexString(attr);
+            var infoHex = util.arrayBufferToHexString(info);
+            var balHex = util.arrayBufferToHexString(bal);
+            
+            // Parse card number from info
             var cardNumberHex = 
-                hexRaw.substring(0, 4) + " " +
-                hexRaw.substring(4, 8) + " " +
-                hexRaw.substring(8, 12) + " " +
-                hexRaw.substring(12, 16);
-                
-            var balParsed = util.parseBalance(bal);
+                infoHex.substring(0, 4) + " " +
+                infoHex.substring(4, 8) + " " +
+                infoHex.substring(8, 12) + " " +
+                infoHex.substring(12, 16);
             
-            // Buat mock UID (atau bisa dari tag parameter)
-            var uid = tag && tag.id ? 
-                nfc.bytesToHexString(tag.id) : 
-                "04000000000000";
+            // Parse balance
+            var balBytes = new Uint8Array(bal);
+            var balParsed = util.parseBalance(balBytes);
+            
+            // Get UID
+            var uid = "00000000000000";
+            if (tag && tag.id && tag.id.length > 0) {
+                if (cordova.platformId === "ios") {
+                    // iOS mungkin perlu reverse byte order
+                    var reversedId = tag.id.slice().reverse();
+                    uid = util.arrayBytesToHexString(reversedId).replace(/ /g, '');
+                } else {
+                    uid = util.arrayBytesToHexString(tag.id).replace(/ /g, '');
+                }
+            }
             
             return {
-                selectEmoney: util.bytesToHexString(select),
-                cardAttribute: util.bytesToHexString(attr),
+                selectEmoney: selectHex,
+                cardAttribute: attrHex,
                 cardUID: uid,
-                cardInfo: util.bytesToHexString(info),
-                lastbalance: util.bytesToHexString(bal),
+                cardInfo: infoHex,
+                lastbalance: balHex,
                 cardNumber: cardNumberHex,
                 balance: balParsed ? balParsed.balance : 0,
-                platform: "ios"
+                platform: cordova.platformId
             };
             
         } catch (error) {
-            console.error("iOS NFC error:", error);
+            console.error("Error reading card data:", error);
             throw error;
         }
     };
-    
-    
-    // Mock readerMode untuk iOS
-    nfc.readerMode = function(flags, callback) {
-        console.log("iOS mock readerMode");
-        // Langsung panggil getCardData
-        nfc.getCardData({ 
-            id: [0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00],
-            techTypes: ["android.nfc.tech.IsoDep"] 
-        }).then(function(card) {
-            callback({ id: card.cardUID.match(/.{2}/g).map(h => parseInt(h, 16)) });
-        }).catch(function(err) {
-            console.error("Mock error:", err);
-        });
-    };
-}
 
 // kludge some global variables for plugman js-module support
 // eventually these should be replaced and referenced via the module
