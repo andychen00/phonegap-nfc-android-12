@@ -5,6 +5,7 @@
 //  (c) 2107-2020 Don Coleman
 
 #import "NfcPlugin.h"
+#import <CoreNFC/CoreNFC.h>
 
 @interface NfcPlugin() {
     NSString* sessionCallbackId;
@@ -20,6 +21,7 @@
 @property (nonatomic, assign) BOOL keepSessionOpen;
 @property (strong, nonatomic) NFCReaderSession *nfcSession API_AVAILABLE(ios(11.0));
 @property (strong, nonatomic) NFCNDEFMessage *messageToWrite API_AVAILABLE(ios(11.0));
+@property (strong, nonatomic) id<NFCISO7816Tag> connectedISO7816Tag API_AVAILABLE(ios(13.0));
 @end
 
 @implementation NfcPlugin
@@ -268,6 +270,22 @@
             [session restartPolling];
         });
         return;
+    }
+
+    if (tag.type == NFCTagTypeISO7816Compatible) {
+            NSLog(@"ISO7816 Tag detected - e-money card");
+            self.connectedISO7816Tag = [tag asNFCISO7816Tag];
+            
+            if (self->sessionCallbackId) {
+                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:tagMetaData];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:self->sessionCallbackId];
+                self->sessionCallbackId = NULL;
+                }
+            } else {
+                // Untuk NDEF tag biasa
+                id<NFCNDEFTag> ndefTag = (id<NFCNDEFTag>)tag;
+                [self processNDEFTag:session tag:ndefTag metaData:tagMetaData];
+            }
     }
     
     id<NFCTag> tag = [tags firstObject];
@@ -659,6 +677,14 @@
 - (void)sendAPDUIOS:(CDVInvokedUrlCommand*)command API_AVAILABLE(ios(13.0)) {
     NSLog(@"sendAPDUIOS");
     
+    // ⬇️ GUNAKAN connectedISO7816Tag, BUKAN connectedTag ⬇️
+    if (!self.connectedISO7816Tag) {
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                                                          messageAsString:@"No ISO7816 tag connected"];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+        return;
+    }
+    
     NSString* apduHex = [command.arguments objectAtIndex:0];
     
     if (!apduHex || apduHex.length == 0) {
@@ -668,15 +694,6 @@
         return;
     }
     
-    // Check if we have a connected tag
-    if (!connectedTag) {
-        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                                          messageAsString:@"No tag connected"];
-        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        return;
-    }
-    
-    // Convert hex string to NSData
     NSData* apduData = [self hexStringToData:apduHex];
     
     if (apduData.length < 4) {
@@ -688,7 +705,7 @@
     
     const uint8_t *bytes = (const uint8_t *)[apduData bytes];
     
-    // Create APDU command
+    // ⬇️ INI BENAR KARENA connectedISO7816Tag adalah NFCISO7816Tag ⬇️
     NFCISO7816APDU *apdu = [[NFCISO7816APDU alloc] 
                            initWithInstructionClass:bytes[0]
                                    instructionCode:bytes[1]
@@ -697,8 +714,7 @@
                                                 data:[apduData subdataWithRange:NSMakeRange(4, apduData.length-4)]
                               expectedResponseLength:256];
     
-    // Send command to tag
-    [connectedTag sendCommand:apdu completionHandler:^(NSData *responseData, uint8_t sw1, uint8_t sw2, NSError *error) {
+    [self.connectedISO7816Tag sendCommand:apdu completionHandler:^(NSData *responseData, uint8_t sw1, uint8_t sw2, NSError *error) {
         CDVPluginResult* pluginResult;
         
         if (error) {
@@ -706,12 +722,10 @@
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
                                              messageAsString:errorMsg];
         } else {
-            // Combine response data + SW1SW2
             NSMutableData *fullResponse = [NSMutableData dataWithData:responseData];
             [fullResponse appendBytes:&sw1 length:1];
             [fullResponse appendBytes:&sw2 length:1];
             
-            // Convert to hex string
             NSString *hexResponse = [self dataToHexString:fullResponse];
             pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                              messageAsString:hexResponse];
