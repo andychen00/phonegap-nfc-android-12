@@ -130,17 +130,6 @@
                 <string>TAG</string>  
             </array>
         </config-file>
-
-        <config-file target="*-Info.plist" parent="com.apple.developer.nfc.readersession.iso7816.select-identifiers">
-            <array>
-                <!-- AID untuk e-money Indonesia -->
-                <string>A00000000386980701</string> <!-- Flazz/BRIzzI -->
-                <string>A00000000386980702</string> <!-- BCA -->
-                <string>D2760000850101</string>     <!-- Visa -->
-                <string>A0000000031010</string>     <!-- Mastercard -->
-                <string>325041592E5359532E4444463031</string> <!-- PayWave -->
-            </array>
-        </config-file>
         
         <header-file src="src/ios/NfcPlugin.h" />
         <source-file src="src/ios/NfcPlugin.m" />

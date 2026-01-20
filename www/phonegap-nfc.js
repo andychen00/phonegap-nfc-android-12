@@ -534,65 +534,23 @@ var nfc = {
 
     // connect to begin transceive
     connect: function(tech, timeout) {
-    return new Promise(function(resolve, reject) {
-        if (cordova.platformId === "ios") {
-            // iOS - pakai simpleConnect
-            cordova.exec(
-                function() {
-                    resolve({ id: [], techTypes: ["IsoDep"] });
-                },
-                reject,
-                "NfcPlugin",
-                "simpleConnect",
-                []
-            );
-        } else {
-            // Android original
+        return new Promise(function(resolve, reject) {
             cordova.exec(resolve, reject, 'NfcPlugin', 'connect', [tech, timeout]);
-            }
         });
     },
 
     // close transceive connection
     close: function() {
-    return new Promise(function(resolve, reject) {
-        if (cordova.platformId === "ios") {
-            cordova.exec(resolve, reject, "NfcPlugin", "simpleClose", []);
-        } else {
+        return new Promise(function(resolve, reject) {
             cordova.exec(resolve, reject, 'NfcPlugin', 'close', []);
-        }
         });
     },
+
     // data - ArrayBuffer or string of hex data for transcieve
     // the results of transceive are returned in the promise success as an ArrayBuffer
     transceive: function(data) {
-    return new Promise(function(resolve, reject) {
-        if (cordova.platformId === "ios") {
-            // iOS - convert to hex string
-            var hexString;
-            if (typeof data === 'string') {
-                hexString = data;
-            } else if (data instanceof ArrayBuffer) {
-                hexString = util.arrayBufferToHexString(data);
-            } else if (data instanceof Uint8Array) {
-                hexString = util.arrayBufferToHexString(data.buffer);
-            } else {
-                reject("Expecting an ArrayBuffer or String");
-                return;
-            }
-            
-            cordova.exec(
-                function(responseHex) {
-                    var buffer = util.hexStringToArrayBuffer(responseHex);
-                    resolve(buffer);
-                },
-                reject,
-                "NfcPlugin",
-                "simpleTransceive",
-                [hexString]
-            );
-        } else {
-            // Android original
+        return new Promise(function(resolve, reject) {
+
             var buffer;
             if (typeof data === 'string') {
                 buffer = util.hexStringToArrayBuffer(data);
@@ -602,10 +560,9 @@ var nfc = {
                 buffer = data.buffer;
             } else {
                 reject("Expecting an ArrayBuffer or String");
-                return;
             }
+
             cordova.exec(resolve, reject, 'NfcPlugin', 'transceive', [buffer]);
-            }
         });
     },
 

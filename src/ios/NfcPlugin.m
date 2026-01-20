@@ -5,7 +5,6 @@
 //  (c) 2107-2020 Don Coleman
 
 #import "NfcPlugin.h"
-#import <CoreNFC/CoreNFC.h>
 
 @interface NfcPlugin() {
     NSString* sessionCallbackId;
@@ -21,7 +20,6 @@
 @property (nonatomic, assign) BOOL keepSessionOpen;
 @property (strong, nonatomic) NFCReaderSession *nfcSession API_AVAILABLE(ios(11.0));
 @property (strong, nonatomic) NFCNDEFMessage *messageToWrite API_AVAILABLE(ios(11.0));
-@property (strong, nonatomic) id<NFCISO7816Tag> connectedISO7816Tag API_AVAILABLE(ios(13.0));
 @end
 
 @implementation NfcPlugin
@@ -270,22 +268,6 @@
             [session restartPolling];
         });
         return;
-    }
-
-    if (tag.type == NFCTagTypeISO7816Compatible) {
-            NSLog(@"ISO7816 Tag detected - e-money card");
-            self.connectedISO7816Tag = [tag asNFCISO7816Tag];
-            
-            if (self->sessionCallbackId) {
-                CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:tagMetaData];
-                [self.commandDelegate sendPluginResult:pluginResult callbackId:self->sessionCallbackId];
-                self->sessionCallbackId = NULL;
-                }
-            } else {
-                // Untuk NDEF tag biasa
-                id<NFCNDEFTag> ndefTag = (id<NFCNDEFTag>)tag;
-                [self processNDEFTag:session tag:ndefTag metaData:tagMetaData];
-            }
     }
     
     id<NFCTag> tag = [tags firstObject];
@@ -637,31 +619,6 @@
     return jsonString;
 }
 
-#pragma mark - Simple NFC Functions
-- (void)simpleConnect:(CDVInvokedUrlCommand*)command {
-    NSLog(@"simpleConnect - iOS NFC");
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-}
 
-- (void)simpleTransceive:(CDVInvokedUrlCommand*)command {
-    NSLog(@"simpleTransceive - iOS NFC");
-    
-    // Get APDU command
-    NSString* apduHex = [command.arguments objectAtIndex:0];
-    NSLog(@"APDU: %@", apduHex);
-    
-    // Return success response
-    NSString *response = @"9000";
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
-                                                     messageAsString:response];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-}
-
-- (void)simpleClose:(CDVInvokedUrlCommand*)command {
-    NSLog(@"simpleClose - iOS NFC");
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-}
 
 @end

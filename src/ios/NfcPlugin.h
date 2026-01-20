@@ -35,11 +35,6 @@
 // Internal implementation
 - (void)channel:(CDVInvokedUrlCommand *)command;
 
-// Simple NFC functions
-- (void)simpleConnect:(CDVInvokedUrlCommand*)command;
-- (void)simpleTransceive:(CDVInvokedUrlCommand*)command;
-- (void)simpleClose:(CDVInvokedUrlCommand*)command;
-
 @end
 
 #endif
