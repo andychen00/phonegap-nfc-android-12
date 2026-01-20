@@ -17,7 +17,6 @@ import CoreNFC
     var lastError: Error?
     var channelCommand: CDVInvokedUrlCommand?
     var isListeningNDEF = false
-    var iso14443Reader: ISO14443?
 
     // helper to return a string
     func sendSuccess(command: CDVInvokedUrlCommand, result: String) {
@@ -139,125 +138,6 @@ import CoreNFC
                     }
                 }
             })
-        }
-    }
-
-    @objc(connect:)
-    func connect(command: CDVInvokedUrlCommand) {
-        guard #available(iOS 13.0, *) else {
-            sendError(command: command, result: "iOS 13+ required")
-            return
-        }
-        
-        DispatchQueue.main.async {
-            let message = command.arguments.first as? String ?? "Hold e-money card"
-            
-            self.iso14443Reader = ISO14443(completed: { (response, error) in
-                if let error = error {
-                    self.sendError(command: command, result: error.localizedDescription)
-                } else {
-                    self.sendSuccess(command: command, result: response ?? [:])
-                }
-            }, message: message)
-        }
-    }
-    
-    @objc(transceive:)
-    func transceive(command: CDVInvokedUrlCommand) {
-        guard #available(iOS 13.0, *) else {
-            sendError(command: command, result: "iOS 13+ required")
-            return
-        }
-        
-        guard let apduHex = command.arguments.first as? String else {
-            sendError(command: command, result: "APDU hex required")
-            return
-        }
-        
-        guard let reader = self.iso14443Reader else {
-            sendError(command: command, result: "Not connected to tag")
-            return
-        }
-        
-        reader.sendAPDU(apduHex: apduHex) { (response, error) in
-            if let error = error {
-                self.sendError(command: command, result: error.localizedDescription)
-            } else {
-                self.sendSuccess(command: command, result: response ?? "")
-            }
-        }
-    }
-    
-    @objc(close:)
-    func close(command: CDVInvokedUrlCommand) {
-        DispatchQueue.main.async {
-            self.iso14443Reader?.session?.invalidate()
-            self.iso14443Reader = nil
-            self.sendSuccess(command: command, result: "Disconnected")
-        }
-    }
-
-    // TAMBAH INI DI CLASS:
-
-    @objc(connectIOS:)
-    func connectIOS(command: CDVInvokedUrlCommand) {
-        guard #available(iOS 13.0, *) else {    
-        sendError(command: command, result: "iOS 13+ required")
-        return
-        }
-    
-        let message = command.arguments.first as? String ?? "Hold near card"
-    
-        DispatchQueue.main.async {
-            print("iOS: Starting NFC session")
-        
-            self.iso14443Reader = ISO14443(
-                completed: { (tagInfo, error) in
-                    if let error = error {  
-                    self.sendError(command: command, result: error.localizedDescription)
-                    } else {
-                        // Kirim tag info ke JavaScript
-                        self.sendSuccess(command: command, result: tagInfo ?? [:])
-                    }
-                },
-                message: message
-            )
-        }
-    }
-
-    @objc(sendAPDUIOS:)
-    func sendAPDUIOS(command: CDVInvokedUrlCommand) {
-        guard #available(iOS 13.0, *) else {
-            sendError(command: command, result: "iOS 13+ required")
-            return
-        }
-    
-        guard let apduHex = command.arguments.first as? String else {
-        sendError(command: command, result: "APDU hex required")
-        return
-        }
-    
-        guard let reader = self.iso14443Reader else {
-        sendError(command: command, result: "Not connected to tag")
-        return
-        }
-    
-        reader.sendAPDU(apduHex: apduHex) { (response, error) in
-        if let error = error {
-            self.sendError(command: command, result: error.localizedDescription)
-        } else {
-            self.sendSuccess(command: command, result: response ?? "")
-        }
-        }
-    }
-
-    @objc(closeIOS:)    
-    func closeIOS(command: CDVInvokedUrlCommand) {
-        DispatchQueue.main.async {
-            print("iOS: Closing NFC session")
-            self.iso14443Reader?.session?.invalidate()
-            self.iso14443Reader = nil
-            self.sendSuccess(command: command, result: "Disconnected")
         }
     }
 
