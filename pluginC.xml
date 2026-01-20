@@ -88,8 +88,25 @@
         </js-module>
     </platform>
 
+    <platform name="blackberry10">
+        <js-module src="www/phonegap-nfc.js" name="NFC">
+            <runs />
+        </js-module>
+        <!-- override defaults for BB10 -->
+        <js-module src="www/phonegap-nfc-blackberry.js" name="NFCBB10">
+            <runs />
+        </js-module>
+
+        <!-- "native" implementation -->
+        <source-file src="src/blackberry10/index.js" />
+
+        <config-file target="www/config.xml" parent="/widget">
+            <!-- Note: mapping is broken in Cordova 3.1.0-0.2.0 -->
+            <feature name="NfcPlugin" value="com.chariotsolutions.nfc.plugin" />
+        </config-file>
+    </platform>
+
     <platform name="ios">
-        <dependency id="cordova-plugin-add-swift-support"/>
         <js-module src="www/phonegap-nfc.js" name="NFC">
             <runs />
         </js-module>
@@ -98,36 +115,34 @@
             <feature name="NfcPlugin">
                 <param name="ios-package" value="NfcPlugin" />
             </feature>
-            <preference name="deployment-target" value="11" />
-            <preference name="SwiftVersion" value="4" />
-
         </config-file>
-        <source-file src="src/ios/NFCTapPlugin.swift" />
-        <source-file src="src/ios/NFCNDEFDelegate.swift" />
-        <source-file src="src/ios/AppDelegate+NFC.swift" />
-        <source-file src="src/ios/NFCHelpers.swift" />
-        <source-file src="src/ios/NFCTagReader.swift" />
-        <source-file src="src/ios/NFCPlugin-Bridging-Header.h" />
 
-
-        <config-file platform="ios" target="*-Debug.plist" parent="com.apple.developer.nfc.readersession.formats">
+        <!-- https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_nfc_readersession_formats?language=objc -->
+        <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Debug.plist">
             <array>
-                <string>TAG</string>
+                <string>NDEF</string>
+                <string>TAG</string>  
             </array>
         </config-file>
-
-        <config-file platform="ios" target="*-Release.plist" parent="com.apple.developer.nfc.readersession.formats">
+        <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Release.plist">
             <array>
-                <string>TAG</string>
+                <string>NDEF</string>
+                <string>TAG</string>  
             </array>
         </config-file>
+        
+        <header-file src="src/ios/NfcPlugin.h" />
+        <source-file src="src/ios/NfcPlugin.m" />
 
         <!-- frameworks -->
-        <framework src="CoreNFC.framework" weak="true"/>
+        <framework src="CoreNFC.framework" weak="true" />
 
+        <preference name="NFC_USAGE_DESCRIPTION" default="Read NFC Tags" />
         <config-file target="*-Info.plist" parent="NFCReaderUsageDescription">
-            <string>Communicate with IoTize NFC Tags</string>
+            <string>$NFC_USAGE_DESCRIPTION</string>
         </config-file>
+        
     </platform>
+
 
 </plugin>
