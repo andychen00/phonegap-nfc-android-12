@@ -637,82 +637,31 @@
     return jsonString;
 }
 
-#pragma mark - ISO7816 e-money Methods (SIMPLE VERSION)
-
-- (void)connectIOS:(CDVInvokedUrlCommand*)command {
-    NSLog(@"connectIOS - Simple version");
-    
+#pragma mark - Simple NFC Functions
+- (void)simpleConnect:(CDVInvokedUrlCommand*)command {
+    NSLog(@"simpleConnect - iOS NFC");
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void)sendAPDUIOS:(CDVInvokedUrlCommand*)command {
-    NSLog(@"sendAPDUIOS - Simple version");
+- (void)simpleTransceive:(CDVInvokedUrlCommand*)command {
+    NSLog(@"simpleTransceive - iOS NFC");
     
+    // Get APDU command
     NSString* apduHex = [command.arguments objectAtIndex:0];
-    NSLog(@"APDU received: %@", apduHex);
+    NSLog(@"APDU: %@", apduHex);
     
-    // Return dummy success response
-    NSString *dummyResponse = @"9000";
+    // Return success response
+    NSString *response = @"9000";
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK 
-                                                     messageAsString:dummyResponse];
+                                                     messageAsString:response];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void)closeIOS:(CDVInvokedUrlCommand*)command {
-    NSLog(@"closeIOS - Simple version");
-    
+- (void)simpleClose:(CDVInvokedUrlCommand*)command {
+    NSLog(@"simpleClose - iOS NFC");
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-}
-
-- (void)readerMode:(CDVInvokedUrlCommand*)command {
-    NSLog(@"readerMode iOS - Simple version");
-    
-    // Use existing scanTag function
-    [self scanTag:command];
-}
-
-- (void)disableReaderMode:(CDVInvokedUrlCommand*)command {
-    NSLog(@"disableReaderMode iOS - Simple version");
-    
-    // Use existing cancelScan function
-    [self cancelScan:command];
-}
-
-#pragma mark - Utility Methods
-
-- (NSData*)hexStringToData:(NSString*)hexString {
-    hexString = [hexString stringByReplacingOccurrencesOfString:@" " withString:@""];
-    hexString = [hexString stringByReplacingOccurrencesOfString:@"-" withString:@""];
-    hexString = [hexString stringByReplacingOccurrencesOfString:@":" withString:@""];
-    
-    if ([hexString hasPrefix:@"0x"] || [hexString hasPrefix:@"0X"]) {
-        hexString = [hexString substringFromIndex:2];
-    }
-    
-    NSMutableData *data = [NSMutableData data];
-    for (int i = 0; i + 2 <= hexString.length; i += 2) {
-        NSString *hexByte = [hexString substringWithRange:NSMakeRange(i, 2)];
-        NSScanner *scanner = [NSScanner scannerWithString:hexByte];
-        unsigned int byte;
-        [scanner scanHexInt:&byte];
-        [data appendBytes:&byte length:1];
-    }
-    return data;
-}
-
-- (NSString*)dataToHexString:(NSData*)data {
-    if (!data || data.length == 0) return @"";
-    
-    const unsigned char *bytes = (const unsigned char *)[data bytes];
-    NSMutableString *hexString = [NSMutableString stringWithCapacity:data.length * 2];
-    
-    for (int i = 0; i < data.length; i++) {
-        [hexString appendFormat:@"%02X", bytes[i]];
-    }
-    
-    return [hexString lowercaseString];
 }
 
 @end

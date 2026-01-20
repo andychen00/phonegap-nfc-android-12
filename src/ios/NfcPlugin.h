@@ -35,16 +35,10 @@
 // Internal implementation
 - (void)channel:(CDVInvokedUrlCommand *)command;
 
-// ISO7816 e-money Methods
-- (void)connectIOS:(CDVInvokedUrlCommand*)command;
-- (void)sendAPDUIOS:(CDVInvokedUrlCommand*)command;
-- (void)closeIOS:(CDVInvokedUrlCommand*)command;
-- (void)readerMode:(CDVInvokedUrlCommand*)command;
-- (void)disableReaderMode:(CDVInvokedUrlCommand*)command;
-
-// Utility methods
-- (NSData*)hexStringToData:(NSString*)hexString;
-- (NSString*)dataToHexString:(NSData*)data;
+// Simple NFC functions
+- (void)simpleConnect:(CDVInvokedUrlCommand*)command;
+- (void)simpleTransceive:(CDVInvokedUrlCommand*)command;
+- (void)simpleClose:(CDVInvokedUrlCommand*)command;
 
 @end
 
