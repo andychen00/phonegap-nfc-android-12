@@ -107,7 +107,6 @@
     </platform>
 
     <platform name="ios">
-        <dependency id="cordova-plugin-add-swift-support@2.0.2"/>
         <js-module src="www/phonegap-nfc.js" name="NFC">
             <runs />
         </js-module>
@@ -117,7 +116,7 @@
                 <param name="ios-package" value="NfcPlugin" />
             </feature>
             <preference name="deployment-target" value="11" />
-            <preference name="SwiftVersion" value="4" />
+            <preference name="UseSwiftLanguageVersion" value="4" />
         </config-file>
 
         <source-file src="src/ios/NFCTapPlugin.swift" />
