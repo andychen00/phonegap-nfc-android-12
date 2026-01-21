@@ -5,6 +5,7 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.util.Log;
+import android.os.Bundle;
 
 import org.apache.cordova.*;
 import org.json.JSONArray;
@@ -48,7 +49,7 @@ public class NfcPlugin extends CordovaPlugin {
 
         if (READER_MODE.equalsIgnoreCase(action)) {
             int flags = args.getInt(0);
-            enableReaderMode(flags, callbackContext);
+            readerMode(flags, callbackContext);
             return true;
         }
 
@@ -77,19 +78,21 @@ public class NfcPlugin extends CordovaPlugin {
     }
 
     // ===================== READER MODE =====================
-    private void enableReaderMode(int flags, CallbackContext callbackContext) {
+    private void readerMode(int flags, CallbackContext callbackContext) {
+        Bundle extras = new Bundle();
         readerModeCallback = callbackContext;
+        getActivity().runOnUiThread(() -> {
+            NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(getActivity());
 
-        cordova.getActivity().runOnUiThread(() -> {
-            NfcAdapter adapter = NfcAdapter.getDefaultAdapter(getActivity());
-            adapter.enableReaderMode(
-                    getActivity(),
-                    readerCallback,
-                    flags,
-                    null
-            );
+            // 🔥 FIX: MATIKAN foreground dispatch dulu
+            try {
+                nfcAdapter.disableForegroundDispatch(getActivity());
+            } catch (Exception ignored) {}
+
+            nfcAdapter.enableReaderMode(getActivity(), readerCallback, flags, extras);
         });
     }
+
 
     private void disableReaderMode(CallbackContext callbackContext) {
         cordova.getActivity().runOnUiThread(() -> {
