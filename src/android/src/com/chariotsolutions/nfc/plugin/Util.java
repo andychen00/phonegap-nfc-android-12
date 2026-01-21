@@ -104,10 +104,18 @@ public class Util {
     static byte[] jsonToByteArray(JSONArray json) throws JSONException {
         byte[] b = new byte[json.length()];
         for (int i = 0; i < json.length(); i++) {
-            b[i] = (byte) json.getInt(i);
+            Object obj = json.get(i);
+            if (obj instanceof Integer) {
+                b[i] = ((Integer) obj).byteValue();
+            } else if (obj instanceof String) {  // support hex string
+                b[i] = (byte) Integer.parseInt((String)obj, 16);
+            } else {
+                throw new JSONException("Invalid byte array element: " + obj);
+            }
         }
         return b;
     }
+
 
     static JSONArray messageToJSON(NdefMessage message) {
         if (message == null) {
