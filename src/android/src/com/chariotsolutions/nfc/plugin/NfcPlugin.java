@@ -170,30 +170,27 @@ public class NfcPlugin extends CordovaPlugin {
     // ===================== TRANSCEIVE =====================
     private void transceive(byte[] command, CallbackContext callbackContext) {
         cordova.getThreadPool().execute(() -> {
-            try {
-                if (isoDep == null || !isoDep.isConnected()) {
-                    callbackContext.error("IsoDep not connected");
-                    return;
-                }
-                byte[] response;
-
-                try {
-                    Log.e(TAG, "APDU SEND = " + Util.toHexString(command));
-                    response = isoDep.transceive(command);
-                    Log.e(TAG, "APDU RESP = " + Util.toHexString(response));
-                } catch (Exception e) {
-                    Log.e(TAG, "TRANSCEIVE FAILED", e);
-                    callbackContext.error(e.getMessage());
-                    return;
-                }
-
-                callbackContext.success(Util.byteArrayToJSON(response));
-
-            } catch (IOException e) {
-                callbackContext.error(e.getMessage());
+            if (isoDep == null || !isoDep.isConnected()) {
+                callbackContext.error("IsoDep not connected");
+                return;
             }
+    
+            byte[] response;
+    
+            try {
+                Log.e(TAG, "APDU SEND = " + Util.toHexString(command));
+                response = isoDep.transceive(command);
+                Log.e(TAG, "APDU RESP = " + Util.toHexString(response));
+            } catch (Exception e) {
+                Log.e(TAG, "TRANSCEIVE FAILED", e);
+                callbackContext.error(e.getMessage());
+                return;
+            }
+    
+            callbackContext.success(Util.byteArrayToJSON(response));
         });
     }
+
 
     // ===================== CLOSE =====================
     private void close(CallbackContext callbackContext) {
