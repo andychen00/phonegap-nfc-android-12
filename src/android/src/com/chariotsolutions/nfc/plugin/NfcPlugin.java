@@ -13,6 +13,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+
 
 public class NfcPlugin extends CordovaPlugin {
 
@@ -106,7 +108,11 @@ public class NfcPlugin extends CordovaPlugin {
         @Override
         public void onTagDiscovered(Tag tag) {
             lastTag = tag; // <<< WAJIB BIAR IsoDep CONNECT BISA
+            Log.e(TAG, "TAG DISCOVERED");
+
             try {
+                Log.e(TAG, "Tag techs = " + Arrays.toString(tag.getTechList()));
+
                 JSONObject json = new JSONObject();
                 json.put("id", Util.byteArrayToJSON(tag.getId()));
                 json.put("techList", new JSONArray(tag.getTechList()));
@@ -120,6 +126,7 @@ public class NfcPlugin extends CordovaPlugin {
 
             } catch (Exception e) {
                 Log.e(TAG, "onTagDiscovered error", e);
+                Log.e(TAG, "FAILED reading tech list", e);
             }
         }
     };
@@ -135,12 +142,20 @@ public class NfcPlugin extends CordovaPlugin {
                 }
 
                 isoDep = IsoDep.get(tag);
+                Log.e(TAG, "IsoDep = " + isoDep);
                 if (isoDep == null) {
                     callbackContext.error("IsoDep not supported");
                     return;
                 }
 
-                isoDep.connect();
+                try {
+                    Log.e(TAG, "IsoDep.connect() BEGIN");
+                    isoDep.connect();
+                    Log.e(TAG, "IsoDep.connect() OK");
+                } catch (Exception e) {
+                    Log.e(TAG, "IsoDep.connect FAILED", e);
+                    return;
+                }
 
                 JSONObject result = new JSONObject();
                 result.put("maxTransceiveLength", isoDep.getMaxTransceiveLength());
@@ -160,9 +175,19 @@ public class NfcPlugin extends CordovaPlugin {
                     callbackContext.error("IsoDep not connected");
                     return;
                 }
+                byte[] response;
 
-                byte[] response = isoDep.transceive(command);
-                callbackContext.success(response);
+                try {
+                    Log.e(TAG, "APDU SEND = " + Util.toHexString(command));
+                    response = isoDep.transceive(command);
+                    Log.e(TAG, "APDU RESP = " + Util.toHexString(response));
+                } catch (Exception e) {
+                    Log.e(TAG, "TRANSCEIVE FAILED", e);
+                    callbackContext.error(e.getMessage());
+                    return;
+                }
+
+                callbackContext.success(Util.byteArrayToJSON(response));
 
             } catch (IOException e) {
                 callbackContext.error(e.getMessage());
@@ -194,5 +219,14 @@ public class NfcPlugin extends CordovaPlugin {
 
     private Activity getActivity() {
         return cordova.getActivity();
+    }
+
+    static String toHexString(byte[] bytes) {
+        if (bytes == null) return "null";
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02X", b));
+        }
+        return sb.toString();
     }
 }
