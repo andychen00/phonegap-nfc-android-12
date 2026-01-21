@@ -221,12 +221,4 @@ public class NfcPlugin extends CordovaPlugin {
         return cordova.getActivity();
     }
 
-    static String toHexString(byte[] bytes) {
-        if (bytes == null) return "null";
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02X", b));
-        }
-        return sb.toString();
-    }
-}
+   
