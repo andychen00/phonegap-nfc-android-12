@@ -46,7 +46,7 @@ public class NfcPlugin extends CordovaPlugin {
             }
             return true;
         }
-        
+
         if (READER_MODE.equalsIgnoreCase(action)) {
             int flags = args.getInt(0);
             enableReaderMode(flags, callbackContext);
@@ -172,15 +172,17 @@ public class NfcPlugin extends CordovaPlugin {
 
     // ===================== CLOSE =====================
     private void close(CallbackContext callbackContext) {
-        try {
-            if (isoDep != null && isoDep.isConnected()) {
-                isoDep.close();
+        cordova.getThreadPool().execute(() -> {
+            try {
+                if (isoDep != null && isoDep.isConnected()) {
+                    isoDep.close();
+                }
+                isoDep = null;
+                callbackContext.success();
+            } catch (IOException e) {
+                callbackContext.error(e.getMessage());
             }
-            isoDep = null;
-            callbackContext.success();
-        } catch (IOException e) {
-            callbackContext.error(e.getMessage());
-        }
+        });
     }
 
     // ===================== HELPERS =====================
