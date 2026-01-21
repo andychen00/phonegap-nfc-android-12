@@ -24,6 +24,11 @@ public class NfcPlugin extends CordovaPlugin {
     private static final String CONNECT = "connect";
     private static final String TRANSCEIVE = "transceive";
     private static final String CLOSE = "close";
+    private static final String ENABLED = "enabled"; // ✅ BARU
+
+    // status
+    private static final String STATUS_NFC_OK = "NFC_OK"; // ✅ BARU
+    private static final String STATUS_NFC_DISABLED = "NFC_DISABLED"; // optional
 
     private CallbackContext readerModeCallback;
     private IsoDep isoDep;
@@ -31,7 +36,17 @@ public class NfcPlugin extends CordovaPlugin {
     // ===================== EXECUTE =====================
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        if (ENABLED.equalsIgnoreCase(action)) {
+            NfcAdapter adapter = NfcAdapter.getDefaultAdapter(getActivity());
 
+            if (adapter != null && adapter.isEnabled()) {
+                callbackContext.success(STATUS_NFC_OK);
+            } else {
+                callbackContext.error(STATUS_NFC_DISABLED);
+            }
+            return true;
+        }
+        
         if (READER_MODE.equalsIgnoreCase(action)) {
             int flags = args.getInt(0);
             enableReaderMode(flags, callbackContext);
