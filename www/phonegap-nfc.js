@@ -1098,11 +1098,11 @@ nfc.getCardData = async function(tag) {
         cardUID: uidFromAndroid,
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
-        cardNumber: cardNumberHex,
-        balance: balParsed.balance,
         updateData: nfc.bytesToHexString(updateData),
         reversalData: nfc.bytesToHexString(reversalData),
-        certificate: nfc.bytesToHexString(certificateData)
+        certificate: nfc.bytesToHexString(certificateData),
+        cardNumber: cardNumberHex,
+        balance: balParsed.balance
     };
 };
 
