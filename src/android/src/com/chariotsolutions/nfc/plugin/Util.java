@@ -93,14 +93,6 @@ public class Util {
         return records;
     }
 
-    static JSONArray byteArrayToJSON(byte[] bytes) {
-        JSONArray json = new JSONArray();
-        for (byte aByte : bytes) {
-            json.put(aByte);
-        }
-        return json;
-    }
-
     static byte[] jsonToByteArray(JSONArray json) throws JSONException {
         byte[] b = new byte[json.length()];
         for (int i = 0; i < json.length(); i++) {
@@ -131,6 +123,12 @@ public class Util {
         return new JSONArray(list);
     }
 
+    static JSONArray byteArrayToJSON(byte[] bytes) {
+        JSONArray arr = new JSONArray();
+        for (byte b : bytes) { arr.put(b & 0xFF); }
+        return arr;
+    }
+
     static JSONObject recordToJSON(NdefRecord record) {
         JSONObject json = new JSONObject();
         try {
@@ -145,7 +143,7 @@ public class Util {
         return json;
     }
 
-    public static byte[] hexStringToByteArray(String s) {
+    static byte[] hexStringToByteArray(String s) {
         int len = s.length();
         byte[] data = new byte[len/2];
         for (int i=0; i<len; i+=2) {
@@ -155,13 +153,9 @@ public class Util {
         return data;
     }
 
-    public static JSONArray byteArrayToJSON(byte[] bytes) {
-        JSONArray arr = new JSONArray();
-        for (byte b : bytes) { arr.put(b & 0xFF); }
-        return arr;
-    }
+  
 
-    public static String toHexString(byte[] bytes) {
+    static String toHexString(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) { sb.append(String.format("%02X", b)); }
         return sb.toString();
