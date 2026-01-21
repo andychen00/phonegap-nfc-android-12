@@ -1079,16 +1079,16 @@ nfc.getCardData = async function(tag) {
     // );
 
     // 6. GET REVERSAL DATA (E7)  ✅ INI YANG KAMU TANYA
-    var reversalData = await nfc.sendApdu(
-        "Get Reversal Data",
-        "00E70000"
-    );
+    // var reversalData = await nfc.sendApdu(
+    //     "Get Reversal Data",
+    //     "00E70000"
+    // );
 
-    // 7. GET CERTIFICATE (E0)
-    var certificateData = await nfc.sendApdu(
-        "Certificate",
-        "00E0000000"
-    );
+    // // 7. GET CERTIFICATE (E0)
+    // var certificateData = await nfc.sendApdu(
+    //     "Certificate",
+    //     "00E0000000"
+    // );
 
     await nfc.close();
 
@@ -1099,8 +1099,8 @@ nfc.getCardData = async function(tag) {
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
         updateData: nfc.bytesToHexString(attr),
-        reversalData: nfc.bytesToHexString(reversalData),
-        certificate: nfc.bytesToHexString(certificateData),
+        reversalData: nfc.bytesToHexString(attr),
+        certificate: nfc.bytesToHexString(attr),
         cardNumber: cardNumberHex,
         balance: balParsed.balance
     };
