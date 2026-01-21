@@ -954,28 +954,137 @@ nfc.parseCardAttribute = util.parseCardAttribute;
 nfc.parseBalance = util.parseBalance;
 nfc.sendApdu = util.sendApdu;
 
+/* =========================
+ * SECURE APDU HELPERS
+ * ========================= */
+
+util.toHexBE = function (num, bytes) {
+    var hex = num.toString(16).padStart(bytes * 2, "0");
+    return hex;
+};
+
+util.encodeDateTime = function (date) {
+    function pad(n) { return n.toString().padStart(2, "0"); }
+    return (
+        pad(date.getDate()) +
+        pad(date.getMonth() + 1) +
+        pad(date.getFullYear() % 100) +
+        pad(date.getHours()) +
+        pad(date.getMinutes()) +
+        pad(date.getSeconds())
+    );
+};
+
+// build InputData untuk E5
+util.buildUpdateInput = function (p) {
+    return (
+        util.encodeDateTime(p.date) +           // 6 byte
+        "0000000000000000" +                   // CounterCard (8)
+        "000000000000" +                       // PIN (6)
+        p.session +                            // Session (8)
+        p.institutionRef +                     // InstitutionRef (8)
+        p.sourceAccount +                      // SourceAccount (10)
+        util.toHexBE(p.amount, 4) +             // Amount (4 BE)
+        p.merchantData                         // MerchantData (20)
+    );
+};
+
+/* =========================
+ * SECURE COMMANDS
+ * ========================= */
+
+nfc.getUpdateData = async function (params) {
+    var inputHex = util.buildUpdateInput(params);
+    var lc = (inputHex.length / 2).toString(16).padStart(2, "0");
+
+    var apdu = "00E50000" + lc + inputHex;
+
+    var resp = await nfc.sendApdu("Get Update Data (E5)", apdu);
+    return resp.slice(0, resp.length - 2);
+};
+
+nfc.getReversalData = async function () {
+    var resp = await nfc.sendApdu("Get Reversal Data (E7)", "00E70000");
+    return resp.slice(0, resp.length - 2);
+};
+
+nfc.getCertificate = async function () {
+    var resp = await nfc.sendApdu("Get Certificate (E0)", "00E0000000");
+    return resp.slice(0, resp.length - 2);
+};
+
 nfc.getCardData = async function(tag) {
+
+    // UID
     var tagId = [];
-    for (var i = tag.id.length - 1; i >= 0; i--) tagId.push(tag.id[i]);
+    for (var i = tag.id.length - 1; i >= 0; i--) {
+        tagId.push(tag.id[i]);
+    }
     var uidFromAndroid = nfc.bytesToHexString(tagId);
 
     await nfc.connect("android.nfc.tech.IsoDep", 5000);
 
-    var select = await nfc.sendApdu("Select eMoney","00A40400080000000000000001");
+    // 1. SELECT
+    var select = await nfc.sendApdu(
+        "Select eMoney",
+        "00A40400080000000000000001"
+    );
 
-    var attr = await nfc.sendApdu("Card Attribute","00F210000B");
+    // 2. CARD ATTRIBUTE (public)
+    var attr = await nfc.sendApdu(
+        "Card Attribute",
+        "00F210000B"
+    );
 
-    var info = await nfc.sendApdu("Card Info","00B300003F");
+    // 3. CARD INFO (public)
+    var info = await nfc.sendApdu(
+        "Card Info",
+        "00B300003F"
+    );
+
     var hexRaw = util.bytesToHexString(info);
-    var cardNumberHex = 
+    var cardNumberHex =
         hexRaw.substring(0, 4) + " " +
         hexRaw.substring(4, 8) + " " +
         hexRaw.substring(8, 12) + " " +
         hexRaw.substring(12, 16);
 
-    var bal = await nfc.sendApdu("Last Balance","00B500000A");
+    // 4. LAST BALANCE (public)
+    var bal = await nfc.sendApdu(
+        "Last Balance",
+        "00B500000A"
+    );
     var balParsed = util.parseBalance(bal);
-    var certificateData = await nfc.sendApdu("Certificate","00E00000");
+
+    /* =========================
+     * SECURE FLOW (WAJIB)
+     * ========================= */
+
+    // ⚠️ MINIMAL DUMMY INPUT (TEST SAJA)
+    var dummyInput =
+        "010101010101" +               // Date (6)
+        "0000000000000000" +           // Counter (8)
+        "000000000000" +               // PIN (6)
+        "0011223344556677" +           // Session (8)
+        "AABBCCDDEEFF0011" +           // InstitutionRef (8)
+        "11223344556677889900" +       // SourceAccount (10)
+        "00002710" +                   // Amount (10000)
+        "0000000000000000000000000000000000000000"; // Merchant (20)
+
+    var lc = (dummyInput.length / 2).toString(16).padStart(2, "0");
+
+    // 5. GET UPDATE DATA (E5)
+    var updateData = await nfc.sendApdu(
+        "Get Update Data",
+        "00E50000" + lc + dummyInput
+    );
+
+    // 6. GET CERTIFICATE (E0) — FIXED
+    var certificateData = await nfc.sendApdu(
+        "Certificate",
+        "00E0000000"
+    );
+
     await nfc.close();
 
     return {
@@ -986,9 +1095,47 @@ nfc.getCardData = async function(tag) {
         lastbalance: nfc.bytesToHexString(bal),
         cardNumber: cardNumberHex,
         balance: balParsed.balance,
+        updateData: nfc.bytesToHexString(updateData),
         certificate: nfc.bytesToHexString(certificateData),
     };
 };
+
+
+// nfc.getCardData = async function(tag) {
+//     var tagId = [];
+//     for (var i = tag.id.length - 1; i >= 0; i--) tagId.push(tag.id[i]);
+//     var uidFromAndroid = nfc.bytesToHexString(tagId);
+
+//     await nfc.connect("android.nfc.tech.IsoDep", 5000);
+
+//     var select = await nfc.sendApdu("Select eMoney","00A40400080000000000000001");
+
+//     var attr = await nfc.sendApdu("Card Attribute","00F210000B");
+
+//     var info = await nfc.sendApdu("Card Info","00B300003F");
+//     var hexRaw = util.bytesToHexString(info);
+//     var cardNumberHex = 
+//         hexRaw.substring(0, 4) + " " +
+//         hexRaw.substring(4, 8) + " " +
+//         hexRaw.substring(8, 12) + " " +
+//         hexRaw.substring(12, 16);
+
+//     var bal = await nfc.sendApdu("Last Balance","00B500000A");
+//     var balParsed = util.parseBalance(bal);
+//     var certificateData = await nfc.sendApdu("Certificate","00E00000");
+//     await nfc.close();
+
+//     return {
+//         selectEmoney: nfc.bytesToHexString(select),
+//         cardAttribute: nfc.bytesToHexString(attr),
+//         cardUID: uidFromAndroid,
+//         cardInfo: nfc.bytesToHexString(info),
+//         lastbalance: nfc.bytesToHexString(bal),
+//         cardNumber: cardNumberHex,
+//         balance: balParsed.balance,
+//         certificate: nfc.bytesToHexString(certificateData),
+//     };
+// };
 
 // TAMBAH INI DI AKHIR FILE, SEBELUM: window.nfc = nfc;
 
