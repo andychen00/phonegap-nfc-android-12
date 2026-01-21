@@ -1015,7 +1015,6 @@ nfc.getCertificate = async function () {
 
 nfc.getCardData = async function(tag) {
 
-    // UID
     var tagId = [];
     for (var i = tag.id.length - 1; i >= 0; i--) {
         tagId.push(tag.id[i]);
@@ -1030,13 +1029,13 @@ nfc.getCardData = async function(tag) {
         "00A40400080000000000000001"
     );
 
-    // 2. CARD ATTRIBUTE (public)
+    // 2. CARD ATTRIBUTE
     var attr = await nfc.sendApdu(
         "Card Attribute",
         "00F210000B"
     );
 
-    // 3. CARD INFO (public)
+    // 3. CARD INFO
     var info = await nfc.sendApdu(
         "Card Info",
         "00B300003F"
@@ -1049,7 +1048,7 @@ nfc.getCardData = async function(tag) {
         hexRaw.substring(8, 12) + " " +
         hexRaw.substring(12, 16);
 
-    // 4. LAST BALANCE (public)
+    // 4. LAST BALANCE
     var bal = await nfc.sendApdu(
         "Last Balance",
         "00B500000A"
@@ -1057,10 +1056,10 @@ nfc.getCardData = async function(tag) {
     var balParsed = util.parseBalance(bal);
 
     /* =========================
-     * SECURE FLOW (WAJIB)
+     * SECURE FLOW
      * ========================= */
 
-    // ⚠️ MINIMAL DUMMY INPUT (TEST SAJA)
+    // ⚠️ DUMMY INPUT (TEST ONLY)
     var dummyInput =
         "010101010101" +               // Date (6)
         "0000000000000000" +           // Counter (8)
@@ -1079,7 +1078,13 @@ nfc.getCardData = async function(tag) {
         "00E50000" + lc + dummyInput
     );
 
-    // 6. GET CERTIFICATE (E0) — FIXED
+    // 6. GET REVERSAL DATA (E7)  ✅ INI YANG KAMU TANYA
+    var reversalData = await nfc.sendApdu(
+        "Get Reversal Data",
+        "00E70000"
+    );
+
+    // 7. GET CERTIFICATE (E0)
     var certificateData = await nfc.sendApdu(
         "Certificate",
         "00E0000000"
@@ -1096,9 +1101,11 @@ nfc.getCardData = async function(tag) {
         cardNumber: cardNumberHex,
         balance: balParsed.balance,
         updateData: nfc.bytesToHexString(updateData),
-        certificate: nfc.bytesToHexString(certificateData),
+        reversalData: nfc.bytesToHexString(reversalData),
+        certificate: nfc.bytesToHexString(certificateData)
     };
 };
+
 
 
 // nfc.getCardData = async function(tag) {
