@@ -1072,11 +1072,11 @@ nfc.getCardData = async function(tag) {
 
     var lc = (dummyInput.length / 2).toString(16).padStart(2, "0");
 
-    // 5. GET UPDATE DATA (E5)
-    var updateData = await nfc.sendApdu(
-        "Get Update Data",
-        "00E50000" + lc + dummyInput
-    );
+    // // 5. GET UPDATE DATA (E5)
+    // var updateData = await nfc.sendApdu(
+    //     "Get Update Data",
+    //     "00E50000" + lc + dummyInput
+    // );
 
     // 6. GET REVERSAL DATA (E7)  ✅ INI YANG KAMU TANYA
     var reversalData = await nfc.sendApdu(
@@ -1098,7 +1098,7 @@ nfc.getCardData = async function(tag) {
         cardUID: uidFromAndroid,
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
-        updateData: nfc.bytesToHexString(updateData),
+        updateData: nfc.bytesToHexString(attr),
         reversalData: nfc.bytesToHexString(reversalData),
         certificate: nfc.bytesToHexString(certificateData),
         cardNumber: cardNumberHex,
