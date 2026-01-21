@@ -975,7 +975,7 @@ nfc.getCardData = async function(tag) {
 
     var bal = await nfc.sendApdu("Last Balance","00B500000A");
     var balParsed = util.parseBalance(bal);
-
+    var certificateData = await nfc.sendApdu("Certificate","00E00000");
     await nfc.close();
 
     return {
@@ -986,6 +986,7 @@ nfc.getCardData = async function(tag) {
         lastbalance: nfc.bytesToHexString(bal),
         cardNumber: cardNumberHex,
         balance: balParsed.balance,
+        certificate: nfc.bytesToHexString(certificateData),
     };
 };
 
