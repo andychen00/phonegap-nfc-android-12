@@ -64,7 +64,9 @@ public class NfcPlugin extends CordovaPlugin {
         }
 
         if (TRANSCEIVE.equalsIgnoreCase(action)) {
-            byte[] command = Util.jsonToByteArray(args.getJSONArray(0));
+            byte[] command = args.get(0) instanceof String ?
+                 Util.hexStringToByteArray(args.getString(0)) :
+                 args.getJSONArray(0).toString().getBytes();
             transceive(command, callbackContext);
             return true;
         }
