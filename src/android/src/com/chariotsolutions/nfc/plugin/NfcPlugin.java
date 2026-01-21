@@ -220,5 +220,5 @@ public class NfcPlugin extends CordovaPlugin {
     private Activity getActivity() {
         return cordova.getActivity();
     }
-
+}
    
