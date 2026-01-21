@@ -11,36 +11,33 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.Arrays;
-
 
 public class NfcPlugin extends CordovaPlugin {
 
     private static final String TAG = "NfcPlugin";
 
-    // actions (NAMA TIDAK DIUBAH)
+    // actions
     private static final String READER_MODE = "readerMode";
     private static final String DISABLE_READER_MODE = "disableReaderMode";
     private static final String CONNECT = "connect";
     private static final String TRANSCEIVE = "transceive";
     private static final String CLOSE = "close";
-    private static final String ENABLED = "enabled"; // ✅ BARU
+    private static final String ENABLED = "enabled";
 
-    // status
-    private static final String STATUS_NFC_OK = "NFC_OK"; // ✅ BARU
-    private static final String STATUS_NFC_DISABLED = "NFC_DISABLED"; // optional
+    private static final String STATUS_NFC_OK = "NFC_OK";
+    private static final String STATUS_NFC_DISABLED = "NFC_DISABLED";
 
     private CallbackContext readerModeCallback;
     private IsoDep isoDep;
+    private Tag lastTag;
 
     // ===================== EXECUTE =====================
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+
         if (ENABLED.equalsIgnoreCase(action)) {
             NfcAdapter adapter = NfcAdapter.getDefaultAdapter(getActivity());
-
             if (adapter != null && adapter.isEnabled()) {
                 callbackContext.success(STATUS_NFC_OK);
             } else {
@@ -61,13 +58,12 @@ public class NfcPlugin extends CordovaPlugin {
         }
 
         if (CONNECT.equalsIgnoreCase(action)) {
-            connect(callbackContext);
+            connect(args, callbackContext); // ⬅️ PENTING
             return true;
         }
 
         if (TRANSCEIVE.equalsIgnoreCase(action)) {
-            JSONArray data = args.getJSONArray(0);
-            byte[] command = Util.jsonToByteArray(data);
+            byte[] command = Util.jsonToByteArray(args.getJSONArray(0));
             transceive(command, callbackContext);
             return true;
         }
@@ -87,10 +83,10 @@ public class NfcPlugin extends CordovaPlugin {
         cordova.getActivity().runOnUiThread(() -> {
             NfcAdapter adapter = NfcAdapter.getDefaultAdapter(getActivity());
             adapter.enableReaderMode(
-                getActivity(),
-                readerCallback,
-                flags,
-                null
+                    getActivity(),
+                    readerCallback,
+                    flags,
+                    null
             );
         });
     }
@@ -104,64 +100,52 @@ public class NfcPlugin extends CordovaPlugin {
     }
 
     // ===================== NFC LISTENER =====================
-    private final NfcAdapter.ReaderCallback readerCallback = new NfcAdapter.ReaderCallback() {
-        @Override
-        public void onTagDiscovered(Tag tag) {
-            lastTag = tag; // <<< WAJIB BIAR IsoDep CONNECT BISA
-            Log.e(TAG, "TAG DISCOVERED");
+    private final NfcAdapter.ReaderCallback readerCallback = tag -> {
+        lastTag = tag;
+        Log.e(TAG, "TAG DISCOVERED");
+        Log.e(TAG, "Tag techs = " + Arrays.toString(tag.getTechList()));
 
-            try {
-                Log.e(TAG, "Tag techs = " + Arrays.toString(tag.getTechList()));
+        try {
+            JSONObject json = new JSONObject();
+            json.put("id", Util.byteArrayToJSON(tag.getId()));
+            json.put("techList", new JSONArray(tag.getTechList()));
 
-                JSONObject json = new JSONObject();
-                json.put("id", Util.byteArrayToJSON(tag.getId()));
-                json.put("techList", new JSONArray(tag.getTechList()));
+            PluginResult result = new PluginResult(PluginResult.Status.OK, json);
+            result.setKeepCallback(true);
 
-                PluginResult result = new PluginResult(PluginResult.Status.OK, json);
-                result.setKeepCallback(true);
-
-                if (readerModeCallback != null) {
-                    readerModeCallback.sendPluginResult(result);
-                }
-
-            } catch (Exception e) {
-                Log.e(TAG, "onTagDiscovered error", e);
-                Log.e(TAG, "FAILED reading tech list", e);
+            if (readerModeCallback != null) {
+                readerModeCallback.sendPluginResult(result);
             }
+        } catch (Exception e) {
+            Log.e(TAG, "onTagDiscovered error", e);
         }
     };
 
-    // ===================== CONNECT ISO-DEP =====================
-    private void connect(CallbackContext callbackContext) {
+    // ===================== CONNECT =====================
+    private void connect(JSONArray args, CallbackContext callbackContext) {
         cordova.getThreadPool().execute(() -> {
             try {
-                Tag tag = getLastTag();
-                if (tag == null) {
+                if (lastTag == null) {
                     callbackContext.error("No tag");
                     return;
                 }
 
-                isoDep = IsoDep.get(tag);
-                Log.e(TAG, "IsoDep = " + isoDep);
+                isoDep = IsoDep.get(lastTag);
                 if (isoDep == null) {
                     callbackContext.error("IsoDep not supported");
                     return;
                 }
 
-                try {
-                    Log.e(TAG, "IsoDep.connect() BEGIN");
-                    isoDep.connect();
-                    Log.e(TAG, "IsoDep.connect() OK");
-                } catch (Exception e) {
-                    Log.e(TAG, "IsoDep.connect FAILED", e);
-                    return;
-                }
+                Log.e(TAG, "IsoDep.connect() BEGIN");
+                isoDep.connect();
+                Log.e(TAG, "IsoDep.connect() OK");
 
                 JSONObject result = new JSONObject();
                 result.put("maxTransceiveLength", isoDep.getMaxTransceiveLength());
                 callbackContext.success(result);
 
             } catch (Exception e) {
+                Log.e(TAG, "CONNECT FAILED", e);
                 callbackContext.error(e.getMessage());
             }
         });
@@ -170,52 +154,43 @@ public class NfcPlugin extends CordovaPlugin {
     // ===================== TRANSCEIVE =====================
     private void transceive(byte[] command, CallbackContext callbackContext) {
         cordova.getThreadPool().execute(() -> {
-            if (isoDep == null || !isoDep.isConnected()) {
-                callbackContext.error("IsoDep not connected");
-                return;
-            }
-    
-            byte[] response;
-    
             try {
+                if (isoDep == null || !isoDep.isConnected()) {
+                    callbackContext.error("IsoDep not connected");
+                    return;
+                }
+
                 Log.e(TAG, "APDU SEND = " + Util.toHexString(command));
-                response = isoDep.transceive(command);
+                byte[] response = isoDep.transceive(command);
                 Log.e(TAG, "APDU RESP = " + Util.toHexString(response));
+
+                // ⚠️ JANGAN JSON, BALIKIN RAW BYTE[]
+                callbackContext.success(response);
+
             } catch (Exception e) {
                 Log.e(TAG, "TRANSCEIVE FAILED", e);
                 callbackContext.error(e.getMessage());
-                return;
             }
-    
-            callbackContext.success(Util.byteArrayToJSON(response));
         });
     }
-
 
     // ===================== CLOSE =====================
     private void close(CallbackContext callbackContext) {
         cordova.getThreadPool().execute(() -> {
             try {
-                if (isoDep != null && isoDep.isConnected()) {
+                if (isoDep != null) {
                     isoDep.close();
+                    isoDep = null;
                 }
-                isoDep = null;
                 callbackContext.success();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 callbackContext.error(e.getMessage());
             }
         });
     }
 
     // ===================== HELPERS =====================
-    private Tag lastTag;
-
-    private Tag getLastTag() {
-        return lastTag;
-    }
-
     private Activity getActivity() {
         return cordova.getActivity();
     }
 }
-   
