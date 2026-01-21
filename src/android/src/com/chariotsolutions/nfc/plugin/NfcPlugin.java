@@ -89,9 +89,10 @@ public class NfcPlugin extends CordovaPlugin {
     private final NfcAdapter.ReaderCallback readerCallback = new NfcAdapter.ReaderCallback() {
         @Override
         public void onTagDiscovered(Tag tag) {
+            lastTag = tag; // <<< WAJIB BIAR IsoDep CONNECT BISA
             try {
                 JSONObject json = new JSONObject();
-                json.put("id", Util.toHex(tag.getId()));
+                json.put("id", Util.byteArrayToJSON(tag.getId()));
                 json.put("techList", new JSONArray(tag.getTechList()));
 
                 PluginResult result = new PluginResult(PluginResult.Status.OK, json);
