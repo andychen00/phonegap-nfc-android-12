@@ -1,17 +1,15 @@
-#import <Cordova/CDVPlugin.h>
+#import <Cordova/CDV.h>
 #import <CoreNFC/CoreNFC.h>
 
-@interface NfcPlugin : CDVPlugin <NFCNDEFReaderSessionDelegate, NFCTagReaderSessionDelegate>
+@interface NfcPlugin : CDVPlugin <NFCTagReaderSessionDelegate>
 
-@property (nonatomic, strong) NFCTagReaderSession *tagSession;
-@property (nonatomic, strong) id<NFCISO7816Tag> isoTag;
-
-@property (nonatomic, strong) CDVInvokedUrlCommand *readerModeCommand;
+@property (strong, nonatomic) NFCTagReaderSession *tagSession;
+@property (strong, nonatomic) id<NFCISO7816Tag> isoTag;
+@property (strong, nonatomic) CDVInvokedUrlCommand *readerModeCommand;
 
 - (void)enabled:(CDVInvokedUrlCommand*)command;
 - (void)readerMode:(CDVInvokedUrlCommand*)command;
 - (void)disableReaderMode:(CDVInvokedUrlCommand*)command;
-
 - (void)connect:(CDVInvokedUrlCommand*)command;
 - (void)transceive:(CDVInvokedUrlCommand*)command;
 - (void)close:(CDVInvokedUrlCommand*)command;

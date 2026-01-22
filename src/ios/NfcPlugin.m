@@ -29,8 +29,10 @@
 }
 
 - (void)disableReaderMode:(CDVInvokedUrlCommand*)command {
-    [self.tagSession invalidateSession];
-    self.tagSession = nil;
+    if (self.tagSession) {
+        [self.tagSession invalidateSession];
+        self.tagSession = nil;
+    }
     [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:command.callbackId];
 }
 
@@ -40,7 +42,6 @@
         return;
     }
 
-    // di iOS, connection otomatis saat didetect tag
     NSDictionary *result = @{@"maxTransceiveLength": @(self.isoTag.maximumTransceiveLength)};
     [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:result] callbackId:command.callbackId];
 }
@@ -51,10 +52,14 @@
         return;
     }
 
-    NSData *commandData = [command.arguments objectAtIndex:0];
+    NSData *commandData = (NSData *)[command.arguments objectAtIndex:0];
+    if (![commandData isKindOfClass:[NSData class]]) {
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Invalid command data"] callbackId:command.callbackId];
+        return;
+    }
 
-    [self.isoTag sendCommandAPDU:[[NFCISO7816APDU alloc] initWithData:commandData] completionHandler:^(NSData * _Nullable responseData, uint8_t sw1, uint8_t sw2, NSError * _Nullable error) {
-
+    NFCISO7816APDU *apdu = [[NFCISO7816APDU alloc] initWithData:commandData];
+    [self.isoTag sendCommandAPDU:apdu completionHandler:^(NSData * _Nullable responseData, uint8_t sw1, uint8_t sw2, NSError * _Nullable error) {
         if (error) {
             NSString *errorStr = [NSString stringWithFormat:@"SW=%02X%02X", sw1, sw2];
             [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:errorStr] callbackId:command.callbackId];
@@ -65,15 +70,17 @@
 }
 
 - (void)close:(CDVInvokedUrlCommand*)command {
-    [self.tagSession invalidateSession];
-    self.tagSession = nil;
+    if (self.tagSession) {
+        [self.tagSession invalidateSession];
+        self.tagSession = nil;
+    }
     self.isoTag = nil;
     [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:command.callbackId];
 }
 
 #pragma mark - NFCTagReaderSessionDelegate
 
-- (void)tagReaderSession:(NFCTagReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCTag>> *)tags API_AVAILABLE(ios(13.0)) {
+- (void)tagReaderSession:(NFCTagReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCTag>> *)tags {
     if (tags.count == 0) return;
 
     id<NFCTag> tag = tags.firstObject;
@@ -86,7 +93,7 @@
                 @"techList": @[@"ISO7816"]
             };
             CDVPluginResult *result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:json];
-            [result setKeepCallbackAsBool:YES];
+            [result setKeepCallback:@YES];
             [self.commandDelegate sendPluginResult:result callbackId:self.readerModeCommand.callbackId];
         }
     }
@@ -95,7 +102,7 @@
 }
 
 - (void)tagReaderSessionDidBecomeActive:(NFCTagReaderSession *)session {
-    // aktif
+    // session aktif
 }
 
 - (void)tagReaderSession:(NFCTagReaderSession *)session didInvalidateWithError:(NSError *)error {
