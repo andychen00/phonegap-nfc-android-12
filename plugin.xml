@@ -107,17 +107,19 @@
     </platform>
 
     <platform name="ios">
+        <!-- JS module -->
         <js-module src="www/phonegap-nfc.js" name="NFC">
             <runs />
         </js-module>
 
+        <!-- Feature / native class -->
         <config-file parent="/*" target="config.xml">
             <feature name="NfcPlugin">
                 <param name="ios-package" value="NfcPlugin" />
             </feature>
         </config-file>
 
-        <!-- https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_nfc_readersession_formats?language=objc -->
+        <!-- Entitlements / NFC formats -->
         <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Debug.plist">
             <array>
                 <string>NDEF</string>
@@ -130,18 +132,22 @@
                 <string>TAG</string>  
             </array>
         </config-file>
-        
+
+        <!-- Header & source -->
         <header-file src="src/ios/NfcPlugin.h" />
         <source-file src="src/ios/NfcPlugin.m" />
 
-        <!-- frameworks -->
+        <!-- Frameworks -->
         <framework src="CoreNFC.framework" weak="true" />
+        <framework src="Foundation.framework" />
+        <framework src="UIKit.framework" />
 
+        <!-- NFC Usage description -->
         <preference name="NFC_USAGE_DESCRIPTION" default="Read NFC Tags" />
-        <config-file target="*-Info.plist" parent="NFCReaderUsageDescription">
+        <config-file target="*-Info.plist" parent="NSNFCReaderUsageDescription">
             <string>$NFC_USAGE_DESCRIPTION</string>
         </config-file>
-        
     </platform>
+
 
 </plugin>
