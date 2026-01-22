@@ -63,7 +63,16 @@ public class NfcPlugin extends CordovaPlugin {
         }
 
         if (TRANSCEIVE.equalsIgnoreCase(action)) {
-            byte[] command = args.getArrayBuffer(0); // pseudo-code
+            ordovaArgs args = new CordovaArgs(data);
+
+            byte[] command;
+            try {
+                command = args.getArrayBuffer(0); // langsung dapet byte[] dari JS ArrayBuffer
+            } catch (JSONException e) {
+                callbackContext.error("Invalid ArrayBuffer");
+                return true;
+            }
+
             transceive(command, callbackContext);
             return true;
         }
