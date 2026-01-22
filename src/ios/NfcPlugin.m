@@ -1,111 +1,141 @@
 #import "NfcPlugin.h"
 
-static NFCTagReaderSession *_session = nil;
-static id<NFCTag> _activeTag = nil;
-
 @implementation NfcPlugin
-@synthesize readerCommand;
 
-// Start NFC Reader Mode
+#pragma mark - Cordova Methods
+
+// Check if NFC is available
+- (void)enabled:(CDVInvokedUrlCommand*)command {
+    CDVPluginResult* result;
+    if (@available(iOS 11.0, *)) {
+        if ([NFCNDEFReaderSession readingAvailable]) {
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+        } else {
+            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"NO_NFC"];
+        }
+    } else {
+        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"iOS version not supported"];
+    }
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
+
+// Start reader mode
 - (void)readerMode:(CDVInvokedUrlCommand*)command {
     if (@available(iOS 13.0, *)) {
-        self.readerCommand = command;
-        _session = [[NFCTagReaderSession alloc] initWithPollingOption:NFCPollingISO14443 delegate:self queue:dispatch_get_main_queue()];
-        _session.alertMessage = @"Tempelkan kartu NFC Anda";
-        [_session beginSession];
+        self.readerModeCommand = command;
+        self.tagSession = [[NFCTagReaderSession alloc]
+                           initWithPollingOption:(NFCPollingISO14443 | NFCPollingISO15693)
+                           delegate:self
+                           queue:dispatch_get_main_queue()];
+        self.tagSession.alertMessage = @"Tempelkan kartu NFC Anda";
+        [self.tagSession beginSession];
     } else {
         CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"iOS version not supported"];
         [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
     }
 }
 
-// NFCTagReaderSession Delegate
-- (void)tagReaderSessionDidBecomeActive:(NFCTagReaderSession *)session {
-    // session aktif
-}
-
-- (void)tagReaderSession:(NFCTagReaderSession *)session didInvalidateWithError:(NSError *)error {
-    _activeTag = nil;
-    _session = nil;
-}
-
-- (void)tagReaderSession:(NFCTagReaderSession *)session didDetectTags:(NSArray<__kindof NFCTag *> *)tags API_AVAILABLE(ios(13.0)) {
-    _activeTag = [tags firstObject];
-
-    [session connectToTag:_activeTag completionHandler:^(NSError * _Nullable error) {
-        CDVPluginResult* result;
-        if (error) {
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
-        } else {
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"CARD_DETECTED"];
-        }
-        [result setKeepCallbackAsBool:YES];
-        [self.commandDelegate sendPluginResult:result callbackId:self.readerCommand.callbackId];
-    }];
-}
-
-// Transceive APDU
-- (void)transceive:(CDVInvokedUrlCommand*)command {
-    if (!_activeTag) {
-        CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No tag connected"];
-        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-        return;
+// Disable reader mode / invalidate session
+- (void)disableReaderMode:(CDVInvokedUrlCommand*)command {
+    if (self.tagSession) {
+        [self.tagSession invalidateSession];
+        self.tagSession = nil;
+        self.isoTag = nil;
     }
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
 
-    NSArray* arr = [command.arguments objectAtIndex:0];
-    NSMutableData* cmdData = [NSMutableData new];
-    for (NSNumber* b in arr) {
-        uint8_t byte = (uint8_t)[b unsignedIntValue];
-        [cmdData appendBytes:&byte length:1];
-    }
-
+// Connect to detected ISO7816 tag
+- (void)connect:(CDVInvokedUrlCommand*)command {
     if (@available(iOS 13.0, *)) {
-        id<NFCISO7816Tag> isoTag = [_activeTag asNFCISO7816Tag];
-        if (!isoTag) {
-            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Tag is not ISO7816"];
+        if (!self.isoTag) {
+            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No tag detected"];
+            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+            return;
+        }
+        CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"CONNECTED"];
+        [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+    }
+}
+
+// Send APDU command and receive response
+- (void)transceive:(CDVInvokedUrlCommand*)command {
+    if (@available(iOS 13.0, *)) {
+        if (!self.isoTag) {
+            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No tag connected"];
             [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
             return;
         }
 
-        dispatch_semaphore_t sem = dispatch_semaphore_create(0);
-        __block NSData* resp = nil;
+        NSArray* apduArray = [command.arguments objectAtIndex:0];
+        NSMutableData* cmdData = [NSMutableData data];
+        for (NSNumber* num in apduArray) {
+            uint8_t b = [num unsignedCharValue];
+            [cmdData appendBytes:&b length:1];
+        }
 
-        [isoTag sendCommandAPDU:[[NFCISO7816APDU alloc] initWithData:cmdData] completionHandler:^(NSData * _Nonnull data, uint8_t sw1, uint8_t sw2, NSError * _Nullable error) {
-            if (!error) {
-                NSMutableData* fullRes = [NSMutableData dataWithData:data];
+        [self.isoTag sendCommandAPDU:[[NFCISO7816APDU alloc] initWithData:cmdData]
+                  completionHandler:^(NSData * _Nonnull response, uint8_t sw1, uint8_t sw2, NSError * _Nullable error) {
+            if (error) {
+                CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+                [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+            } else {
+                NSMutableData* fullRes = [NSMutableData dataWithData:response];
                 uint8_t sw[2] = {sw1, sw2};
                 [fullRes appendBytes:sw length:2];
-                resp = fullRes;
+
+                NSMutableArray* resArray = [NSMutableArray array];
+                const uint8_t* bytes = fullRes.bytes;
+                for (NSUInteger i=0; i<fullRes.length; i++) {
+                    [resArray addObject:@(bytes[i])];
+                }
+
+                CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:resArray];
+                [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
             }
-            dispatch_semaphore_signal(sem);
         }];
-
-        dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC));
-
-        if (resp) {
-            NSMutableArray* resultArr = [NSMutableArray new];
-            const uint8_t* bytes = resp.bytes;
-            for (NSUInteger i=0; i<resp.length; i++) {
-                [resultArr addObject:@(bytes[i])];
-            }
-            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:resultArr];
-            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-        } else {
-            CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"No response"];
-            [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
-        }
     }
 }
 
 // Close session
 - (void)close:(CDVInvokedUrlCommand*)command {
-    if (_session) {
-        [_session invalidateSession];
-        _session = nil;
-        _activeTag = nil;
+    if (self.tagSession) {
+        [self.tagSession invalidateSession];
+        self.tagSession = nil;
+        self.isoTag = nil;
     }
     CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
+
+#pragma mark - NFCTagReaderSessionDelegate
+
+- (void)tagReaderSessionDidBecomeActive:(NFCTagReaderSession *)session {
+    // session aktif
+}
+
+- (void)tagReaderSession:(NFCTagReaderSession *)session didInvalidateWithError:(NSError *)error {
+    self.isoTag = nil;
+    self.tagSession = nil;
+}
+
+- (void)tagReaderSession:(NFCTagReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCTag>> *)tags API_AVAILABLE(ios(13.0)) {
+    if (tags.count > 0) {
+        id<NFCTag> tag = tags.firstObject;
+        self.isoTag = [tag asNFCISO7816Tag];
+        [session connectToTag:tag completionHandler:^(NSError * _Nullable error) {
+            CDVPluginResult* result;
+            if (error) {
+                result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
+            } else {
+                result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"TAG_DETECTED"];
+            }
+            if (self.readerModeCommand) {
+                [self.commandDelegate sendPluginResult:result callbackId:self.readerModeCommand.callbackId];
+            }
+        }];
+    }
 }
 
 @end
