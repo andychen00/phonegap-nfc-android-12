@@ -1093,6 +1093,7 @@ nfc.getCardData = async function(tag) {
     // );
 
     // 8. GET CERTIFICATE (E0)
+    var certificate = "";
     try {
         var certificatetemp  = await nfc.sendApdu("Certificate", "00E0000000");
         certificate = "iso:" + nfc.bytesToHexString(certificatetemp);
@@ -1110,7 +1111,7 @@ nfc.getCardData = async function(tag) {
         lastbalance: nfc.bytesToHexString(bal),
         updateData: nfc.bytesToHexString(attr),
         reversalData: nfc.bytesToHexString(attr),
-        certificate: nfc.bytesToHexString(attr),
+        certificate: certificate,
         cardNumber: cardNumberHex,
         balance: balParsed.balance
     };

@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<plugin
-    xmlns="http://www.phonegap.com/ns/plugins/1.0"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    id="phonegap-nfc"
-    version="1.2.0">
+<plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android" id="phonegap-nfc" version="1.2.0">
 
     <name>NFC</name>
 
@@ -26,10 +23,8 @@
             </feature>
         </config-file>
 
-        <source-file src="src/android/src/com/chariotsolutions/nfc/plugin/NfcPlugin.java"
-            target-dir="src/com/chariotsolutions/nfc/plugin"/>
-        <source-file src="src/android/src/com/chariotsolutions/nfc/plugin/Util.java"
-            target-dir="src/com/chariotsolutions/nfc/plugin"/>
+        <source-file src="src/android/src/com/chariotsolutions/nfc/plugin/NfcPlugin.java" target-dir="src/com/chariotsolutions/nfc/plugin"/>
+        <source-file src="src/android/src/com/chariotsolutions/nfc/plugin/Util.java" target-dir="src/com/chariotsolutions/nfc/plugin"/>
 
         <config-file target="AndroidManifest.xml" parent="/manifest">
             <uses-permission android:name="android.permission.NFC"/>
@@ -39,45 +34,43 @@
     </platform>
 
     <platform name="ios">
-    <js-module src="www/phonegap-nfc.js" name="NFC">
-        <runs />
-    </js-module>
+        <js-module src="www/phonegap-nfc.js" name="NFC">
+            <runs />
+        </js-module>
 
-    <config-file parent="/*" target="config.xml">
-        <feature name="NfcPlugin">
-            <param name="ios-package" value="NfcPlugin" />
-        </feature>
-    </config-file>
+        <config-file parent="/*" target="config.xml">
+            <feature name="NfcPlugin">
+                <param name="ios-package" value="NfcPlugin" />
+            </feature>
+        </config-file>
 
-    <!-- iOS NFC entitlements -->
-    <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Debug.plist">
-        <array>
-            <string>NDEF</string>
-            <string>TAG</string>
-        </array>
-    </config-file>
-    <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Release.plist">
-        <array>
-            <string>NDEF</string>
-            <string>TAG</string>
-        </array>
-    </config-file>
+        <!-- iOS NFC entitlements -->
+        <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Debug.plist">
+            <array>
+                <string>NDEF</string>
+                <string>TAG</string>
+            </array>
+        </config-file>
+        <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Release.plist">
+            <array>
+                <string>NDEF</string>
+                <string>TAG</string>
+            </array>
+        </config-file>
 
-    <!-- Header + Source -->
-    <header-file src="src/ios/NfcPlugin.h" />
-    <source-file src="src/ios/NfcPlugin.m" />
+        <!-- Header + Source -->
+        <header-file src="src/ios/NfcPlugin.h" />
+        <source-file src="src/ios/NfcPlugin.m" />
 
-    <!-- Frameworks -->
-    <framework src="CoreNFC.framework" weak="true" />
+        <!-- Frameworks -->
+        <framework src="CoreNFC.framework" weak="true" />
 
-    <!-- Deployment & Usage -->
-    <preference name="deployment-target" value="13.0" />
-    <preference name="NFC_USAGE_DESCRIPTION" default="Read NFC Tags" />
-    <config-file target="*-Info.plist" parent="NFCReaderUsageDescription">
-        <string>$NFC_USAGE_DESCRIPTION</string>
-    </config-file>
-</platform>
-
-
+        <!-- Deployment & Usage -->
+        <preference name="deployment-target" value="13.0" />
+        <preference name="NFC_USAGE_DESCRIPTION" default="Read NFC Tags" />
+        <config-file target="*-Info.plist" parent="NFCReaderUsageDescription">
+            <string>$NFC_USAGE_DESCRIPTION</string>
+        </config-file>
+    </platform>
 
 </plugin>
