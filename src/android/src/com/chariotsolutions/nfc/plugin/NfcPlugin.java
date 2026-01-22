@@ -58,16 +58,18 @@ public class NfcPlugin extends CordovaPlugin {
         }
 
         if (CONNECT.equalsIgnoreCase(action)) {
-            connect(args, callbackContext);
+            String tech = args.getString(0);
+            int timeout = args.optInt(1, -1);
+            connect(tech, timeout, callbackContext);
             return true;
         }
 
         if (TRANSCEIVE.equalsIgnoreCase(action)) {
-            ordovaArgs args = new CordovaArgs(data);
+            CordovaArgs argsData = new CordovaArgs(args);
 
             byte[] command;
             try {
-                command = args.getArrayBuffer(0); // langsung dapet byte[] dari JS ArrayBuffer
+                command = argsData.getArrayBuffer(0); // langsung dapet byte[] dari JS ArrayBuffer
             } catch (JSONException e) {
                 callbackContext.error("Invalid ArrayBuffer");
                 return true;
@@ -133,7 +135,7 @@ public class NfcPlugin extends CordovaPlugin {
     };
 
     // ===================== CONNECT =====================
-    private void connect(JSONArray args, CallbackContext callbackContext) {
+    private void connect(final JSONArray args,  final int timeout, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(() -> {
             try {
                 if (lastTag == null) {
@@ -151,6 +153,7 @@ public class NfcPlugin extends CordovaPlugin {
 
                 Log.e(TAG, "IsoDep.connect() BEGIN");
                 isoDep.connect();
+                isoDep.setTimeout(timeout);
                 Log.e(TAG, "IsoDep.connect() OK");
 
                 JSONObject result = new JSONObject();
