@@ -1035,7 +1035,15 @@ nfc.getCardData = async function(tag) {
         "00F210000B"
     );
 
-    // 3. CARD INFO
+    // 3.CardUUID
+    try {
+            var uidData = await nfc.sendApdu("Card UID (APDU)", "FFCA000000");
+            carUUID = "iso:" + nfc.bytesToHexString(uidData);
+        } catch (e) {
+            carUUID = "nfc:" + uidFromAndroid;
+        }
+
+    // 4. CARD INFO
     var info = await nfc.sendApdu(
         "Card Info",
         "00B300003F"
@@ -1048,7 +1056,7 @@ nfc.getCardData = async function(tag) {
         hexRaw.substring(8, 12) + " " +
         hexRaw.substring(12, 16);
 
-    // 4. LAST BALANCE
+    // 5. LAST BALANCE
     var bal = await nfc.sendApdu(
         "Last Balance",
         "00B500000A"
@@ -1072,30 +1080,32 @@ nfc.getCardData = async function(tag) {
 
     var lc = (dummyInput.length / 2).toString(16).padStart(2, "0");
 
-    // // 5. GET UPDATE DATA (E5)
+    // 6. GET UPDATE DATA (E5)
     // var updateData = await nfc.sendApdu(
     //     "Get Update Data",
     //     "00E50000" + lc + dummyInput
     // );
 
-    // 6. GET REVERSAL DATA (E7)  ✅ INI YANG KAMU TANYA
+    // 7. GET REVERSAL DATA (E7)  ✅ INI YANG KAMU TANYA
     // var reversalData = await nfc.sendApdu(
     //     "Get Reversal Data",
     //     "00E70000"
     // );
 
-    // // 7. GET CERTIFICATE (E0)
-    // var certificateData = await nfc.sendApdu(
-    //     "Certificate",
-    //     "00E0000000"
-    // );
+    // 8. GET CERTIFICATE (E0)
+    try {
+        var certificatetemp  = await nfc.sendApdu("Certificate", "00E0000000");
+        certificate = "iso:" + nfc.bytesToHexString(certificatetemp);
+    } catch (e) {
+        certificate = "error1:" + e; // langsung tampil "Certificate failed (SW=6400)";
+    }
 
     await nfc.close();
 
     return {
         selectEmoney: nfc.bytesToHexString(select),
         cardAttribute: nfc.bytesToHexString(attr),
-        cardUID: uidFromAndroid,
+        cardUID: carUUID,
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
         updateData: nfc.bytesToHexString(attr),
