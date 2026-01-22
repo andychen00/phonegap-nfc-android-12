@@ -44,7 +44,7 @@
             </feature>
         </config-file>
 
-        <!-- iOS NFC entitlements -->
+        <!-- https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_nfc_readersession_formats?language=objc -->
         <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Debug.plist">
             <array>
                 <string>NDEF</string>
@@ -58,15 +58,12 @@
             </array>
         </config-file>
 
-        <!-- Header + Source -->
         <header-file src="src/ios/NfcPlugin.h" />
         <source-file src="src/ios/NfcPlugin.m" />
 
-        <!-- Frameworks -->
+        <!-- frameworks -->
         <framework src="CoreNFC.framework" weak="true" />
 
-        <!-- Deployment & Usage -->
-        <preference name="deployment-target" value="13.0" />
         <preference name="NFC_USAGE_DESCRIPTION" default="Read NFC Tags" />
         <config-file target="*-Info.plist" parent="NFCReaderUsageDescription">
             <string>$NFC_USAGE_DESCRIPTION</string>
