@@ -4,7 +4,7 @@
 @interface NfcPlugin : CDVPlugin <NFCTagReaderSessionDelegate>
 
 @property (strong, nonatomic) NFCTagReaderSession *tagSession;
-@property (strong, nonatomic) id<NFCISO7816Tag> isoTag;
+@property (strong, nonatomic) NFCISO7816Tag *isoTag;
 @property (strong, nonatomic) CDVInvokedUrlCommand *readerModeCommand;
 
 - (void)enabled:(CDVInvokedUrlCommand*)command;

@@ -58,7 +58,30 @@
         return;
     }
 
-    NFCISO7816APDU *apdu = [[NFCISO7816APDU alloc] initWithData:commandData];
+    // Parse commandData to APDU components
+    const uint8_t *bytes = commandData.bytes;
+    if (commandData.length < 5) { // minimum CLA INS P1 P2 Le
+        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"APDU data too short"] callbackId:command.callbackId];
+        return;
+    }
+
+    uint8_t cla = bytes[0];
+    uint8_t ins = bytes[1];
+    uint8_t p1  = bytes[2];
+    uint8_t p2  = bytes[3];
+    uint8_t le  = bytes[4];
+    NSData *data = nil;
+    if (commandData.length > 5) {
+        data = [commandData subdataWithRange:NSMakeRange(5, commandData.length - 5)];
+    }
+
+    NFCISO7816APDU *apdu = [[NFCISO7816APDU alloc] initWithInstructionClass:cla
+                                                             instructionCode:ins
+                                                                       p1:p1
+                                                                       p2:p2
+                                                                     data:data
+                                                      expectedResponseLength:le];
+
     [self.isoTag sendCommandAPDU:apdu completionHandler:^(NSData * _Nullable responseData, uint8_t sw1, uint8_t sw2, NSError * _Nullable error) {
         if (error) {
             NSString *errorStr = [NSString stringWithFormat:@"SW=%02X%02X", sw1, sw2];
@@ -86,7 +109,7 @@
     id<NFCTag> tag = tags.firstObject;
 
     if (tag.type == NFCTagTypeISO7816) {
-        self.isoTag = tag.ISO7816;
+        self.isoTag = (NFCISO7816Tag *)tag.ISO7816;
         if (self.readerModeCommand) {
             NSDictionary *json = @{
                 @"id": [self.isoTag identifier],
