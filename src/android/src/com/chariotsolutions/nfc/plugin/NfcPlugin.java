@@ -135,7 +135,7 @@ public class NfcPlugin extends CordovaPlugin {
     };
 
     // ===================== CONNECT =====================
-    private void connect(final JSONArray args,  final int timeout, final CallbackContext callbackContext) {
+    private void connect(final string tech,  final int timeout, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(() -> {
             try {
                 if (lastTag == null) {
