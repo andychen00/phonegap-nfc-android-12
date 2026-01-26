@@ -1015,13 +1015,18 @@ nfc.getCertificate = async function () {
 
 nfc.getCardData = async function(tag) {
 
-    var tagId = [];
-    for (var i = tag.id.length - 1; i >= 0; i--) {
-        tagId.push(tag.id[i]);
-    }
-    var uidFromAndroid = nfc.bytesToHexString(tagId);
+    var uidFromAndroid = "";
 
-    await nfc.connect("android.nfc.tech.IsoDep", 5000);
+    // ===== ANDROID ONLY =====
+    if (cordova.platformId === "android" && tag && tag.id) {
+        var tagId = [];
+        for (var i = tag.id.length - 1; i >= 0; i--) {
+            tagId.push(tag.id[i]);
+        }
+        uidFromAndroid = nfc.bytesToHexString(tagId);
+
+        await nfc.connect("android.nfc.tech.IsoDep", 5000);
+    }
 
     // 1. SELECT
     var select = await nfc.sendApdu(
