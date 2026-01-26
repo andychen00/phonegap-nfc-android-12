@@ -132,6 +132,7 @@
                 result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"TAG_DETECTED"];
             }
             if (self.readerModeCommand) {
+                [result setKeepCallbackAsBool:YES];
                 [self.commandDelegate sendPluginResult:result callbackId:self.readerModeCommand.callbackId];
             }
         }];
