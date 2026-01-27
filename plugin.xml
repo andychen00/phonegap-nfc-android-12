@@ -66,6 +66,7 @@
         <config-file target="*-Info.plist" parent="NFCReaderUsageDescription">
             <string>$NFC_USAGE_DESCRIPTION</string>
         </config-file>
+        
     </platform>
 
 </plugin>
