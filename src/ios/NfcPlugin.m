@@ -192,10 +192,13 @@ API_AVAILABLE(ios(13.0)) {
         CDVPluginResult *ok = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                messageAsString:@"TAG_DETECTED"];
 
-        [ok setKeepCallbackAsBool:YES];
+        // [ok setKeepCallbackAsBool:YES];
 
         [self.commandDelegate sendPluginResult:ok
-        callbackId:self.readerModeCommand.callbackId];
+                callbackId:self.readerModeCommand.callbackId];
+
+        [self.tagSession invalidateSession];
+        self.tagSession = nil;
     }];
 }
 
