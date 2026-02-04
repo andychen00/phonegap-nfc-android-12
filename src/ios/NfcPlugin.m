@@ -40,9 +40,12 @@
                           delegate:self
                              queue:nil];
 
-    self.tagSession.alertMessage = @"Tap NFC card";
+    // 🔴 DEBUG SIGNAL 1 (PASTI KELIHATAN DI DEVICE)
+    self.tagSession.alertMessage = @"[DEBUG] NFC SESSION STARTED - TAP CARD";
+
     [self.tagSession beginSession];
 }
+
 
 #pragma mark - DISABLE READER MODE
 
@@ -166,37 +169,48 @@ API_AVAILABLE(ios(13.0)) {
 
     id<NFCTag> tag = tags.firstObject;
 
-    if (![tag conformsToProtocol:@protocol(NFCISO7816Tag)]) {
-        CDVPluginResult *err = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                               messageAsString:@"NOT_ISO7816"];
+    // 🔴 DEBUG SIGNAL 2 (native callback kena)
+    CDVPluginResult *debug =
+        [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                           messageAsString:@"IOS_TAG_CALLBACK"];
 
-        [self.commandDelegate sendPluginResult:err callbackId:self.readerModeCommand.callbackId];
+    [debug setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:debug
+            callbackId:self.readerModeCommand.callbackId];
+
+    if (![tag conformsToProtocol:@protocol(NFCISO7816Tag)]) {
+        CDVPluginResult *err =
+            [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                               messageAsString:@"NOT_ISO7816"];
+        [self.commandDelegate sendPluginResult:err
+                callbackId:self.readerModeCommand.callbackId];
         return;
     }
 
     [session connectToTag:tag completionHandler:^(NSError * _Nullable error) {
+
         if (error) {
             CDVPluginResult *err =
                 [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
                                    messageAsString:error.localizedDescription];
-
-            [self.commandDelegate sendPluginResult:err callbackId:self.readerModeCommand.callbackId];
+            [self.commandDelegate sendPluginResult:err
+                    callbackId:self.readerModeCommand.callbackId];
             return;
         }
 
         self.isoTag = [tag asNFCISO7816Tag];
 
-        CDVPluginResult *ok = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+        CDVPluginResult *ok =
+            [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                                messageAsString:@"TAG_DETECTED"];
 
         [ok setKeepCallbackAsBool:YES];
-
         [self.commandDelegate sendPluginResult:ok
                 callbackId:self.readerModeCommand.callbackId];
 
-        // [self.tagSession invalidateSession];
-        // self.tagSession = nil;
+        // ❌ JANGAN invalidateSession DI SINI
     }];
 }
+
 
 @end
