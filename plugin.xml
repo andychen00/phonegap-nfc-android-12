@@ -57,11 +57,11 @@
         </config-file> -->
 
         <!-- NFC entitlement -->
-        <config-file target="*-Entitlements.plist" parent="com.apple.developer.nfc.readersession.formats">
+        <!-- <config-file target="*-Entitlements.plist" parent="com.apple.developer.nfc.readersession.formats">
             <array>
                 <string>ISO7816</string>
             </array>
-        </config-file>
+        </config-file> -->
 
         <header-file src="src/ios/NfcPlugin.h" />
         <source-file src="src/ios/NfcPlugin.m" />

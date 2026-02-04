@@ -2,18 +2,14 @@
 
 @implementation NfcPlugin
 
-#pragma mark - ENABLED
+#pragma mark - ENABLED  
 
 - (void)enabled:(CDVInvokedUrlCommand*)command {
+
     CDVPluginResult *result;
 
     if (@available(iOS 13.0, *)) {
-        if ([NFCTagReaderSession readingAvailable]) {
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-        } else {
-            result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                       messageAsString:@"NFC_NOT_AVAILABLE"];
-        }
+        result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     } else {
         result = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
                                    messageAsString:@"IOS_TOO_LOW"];
@@ -22,6 +18,7 @@
     [self.commandDelegate sendPluginResult:result
                                 callbackId:command.callbackId];
 }
+
 
 #pragma mark - READER MODE
 
