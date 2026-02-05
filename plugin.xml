@@ -45,23 +45,16 @@
         </config-file>
 
         <!-- https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_developer_nfc_readersession_formats?language=objc -->
-        <!-- <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Debug.plist">
+        <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Debug.plist">
             <array>
-                <string>ISO7816</string>
+                <string>TAG</string>
             </array>
         </config-file>
         <config-file parent="com.apple.developer.nfc.readersession.formats" platform="ios" target="*-Release.plist">
             <array>
-                <string>ISO7816</string>
+                <string>TAG</string>
             </array>
-        </config-file> -->
-
-        <!-- NFC entitlement -->
-        <!-- <config-file target="*-Entitlements.plist" parent="com.apple.developer.nfc.readersession.formats">
-            <array>
-                <string>ISO7816</string>
-            </array>
-        </config-file> -->
+        </config-file>
 
         <header-file src="src/ios/NfcPlugin.h" />
         <source-file src="src/ios/NfcPlugin.m" />
