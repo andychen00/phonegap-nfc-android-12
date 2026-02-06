@@ -36,7 +36,7 @@
 
     self.tagSession =
         [[NFCTagReaderSession alloc]
-            initWithPollingOption:NFCPollingISO14443
+            initWithPollingOption:(NFCPollingISO14443 | NFCPollingISO15693)
                           delegate:self
                              queue:nil];
 
@@ -180,48 +180,106 @@ API_AVAILABLE(ios(13.0)) {
 
     id<NFCTag> tag = tags.firstObject;
 
-    // 🔴 DEBUG SIGNAL 2 (native callback kena)
-    CDVPluginResult *debug =
+    CDVPluginResult *dbg1 =
         [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
                            messageAsString:@"IOS_TAG_CALLBACK"];
+    [dbg1 setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:dbg1
+        callbackId:self.readerModeCommand.callbackId];
 
-    [debug setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:debug
-            callbackId:self.readerModeCommand.callbackId];
+    CDVPluginResult *dbg2 =
+        [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                           messageAsString:@"TAG_DETECTED"];
+    [dbg2 setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:dbg2
+        callbackId:self.readerModeCommand.callbackId];
 
-    if (![tag conformsToProtocol:@protocol(NFCISO7816Tag)]) {
-        CDVPluginResult *err =
-            [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                               messageAsString:@"NOT_ISO7816"];
-        [self.commandDelegate sendPluginResult:err
+    // === ISO7816 (EMONEY BARU) ===
+    if ([tag conformsToProtocol:@protocol(NFCISO7816Tag)]) {
+
+        [session connectToTag:tag completionHandler:^(NSError *error) {
+
+            if (error) {
+                CDVPluginResult *err =
+                    [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                        messageAsString:error.localizedDescription];
+                [self.commandDelegate sendPluginResult:err
+                        callbackId:self.readerModeCommand.callbackId];
+                return;
+            }
+
+            self.isoTag = [tag asNFCISO7816Tag];
+
+            CDVPluginResult *ok =
+                [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                    messageAsString:@"ISO7816_READY"];
+
+            [ok setKeepCallbackAsBool:YES];
+            [self.commandDelegate sendPluginResult:ok
+                    callbackId:self.readerModeCommand.callbackId];
+        }];
+
+        return;
+    }
+
+
+    // === MIFARE (EMONEY LAMA) ===
+    if (tag.type == NFCTagTypeMiFare) {
+
+        id<NFCMiFareTag> mifare = [tag asNFCMiFareTag];
+        NSData *uid = mifare.identifier;
+
+        NSString *uidHex = @"";
+        const unsigned char *b = uid.bytes;
+        for (NSUInteger i = 0; i < uid.length; i++) {
+            uidHex = [uidHex stringByAppendingFormat:@"%02X", b[i]];
+        }
+
+        CDVPluginResult *res =
+            [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                messageAsString:
+                [NSString stringWithFormat:@"MIFARE_UID:%@", uidHex]];
+
+        [res setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:res
                 callbackId:self.readerModeCommand.callbackId];
         return;
     }
 
-    [session connectToTag:tag completionHandler:^(NSError * _Nullable error) {
 
-        if (error) {
-            CDVPluginResult *err =
-                [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
-                                   messageAsString:error.localizedDescription];
-            [self.commandDelegate sendPluginResult:err
-                    callbackId:self.readerModeCommand.callbackId];
-            return;
-        }
+    // === TAG LAIN (ANTI SILENCE) ===
+    CDVPluginResult *unknown =
+        [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+            messageAsString:@"TAG_UNSUPPORTED"];
 
-        self.isoTag = [tag asNFCISO7816Tag];
+    [unknown setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:unknown
+            callbackId:self.readerModeCommand.callbackId];
 
-        CDVPluginResult *ok =
-            [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                               messageAsString:@"TAG_DETECTED"];
 
-        [ok setKeepCallbackAsBool:YES];
-        [self.commandDelegate sendPluginResult:ok
-                callbackId:self.readerModeCommand.callbackId];
+    // [session connectToTag:tag completionHandler:^(NSError * _Nullable error) {
 
-        // ❌ JANGAN invalidateSession DI SINI
-    }];
+    //     if (error) {
+    //         CDVPluginResult *err =
+    //             [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+    //                                messageAsString:error.localizedDescription];
+    //         [self.commandDelegate sendPluginResult:err
+    //                 callbackId:self.readerModeCommand.callbackId];
+    //         return;
+    //     }
+
+    //     self.isoTag = [tag asNFCISO7816Tag];
+
+    //     CDVPluginResult *ok =
+    //         [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+    //                            messageAsString:@"TAG_DETECTED"];
+
+    //     [ok setKeepCallbackAsBool:YES];
+    //     [self.commandDelegate sendPluginResult:ok
+    //             callbackId:self.readerModeCommand.callbackId];
+
+    //     // ❌ JANGAN invalidateSession DI SINI
+    // }];
 }
-
 
 @end
