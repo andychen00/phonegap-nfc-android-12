@@ -577,7 +577,11 @@ var nfc = {
     
     // Android NfcAdapter.enabledReaderMode
     readerMode: function(flags, readCallback, errorCallback) {
-        cordova.exec(readCallback, errorCallback, 'NfcPlugin', 'readerMode', [flags]);
+        if (cordova.platformId === "ios") {
+            cordova.exec(readCallback, errorCallback, 'NfcPlugin', 'readerMode', []);
+        } else {
+            cordova.exec(readCallback, errorCallback, 'NfcPlugin', 'readerMode', [flags]);
+        }
     },
 
     disableReaderMode: function(successCallback, errorCallback) {

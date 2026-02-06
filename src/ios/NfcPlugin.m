@@ -160,9 +160,20 @@
 }
 
 - (void)tagReaderSession:(NFCTagReaderSession *)session didInvalidateWithError:(NSError *)error {
+
+    if (self.readerModeCommand) {
+        CDVPluginResult *res =
+            [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
+                messageAsString:@"SESSION_CLOSED"];
+
+        [self.commandDelegate sendPluginResult:res
+            callbackId:self.readerModeCommand.callbackId];
+    }
+
     self.tagSession = nil;
     self.isoTag = nil;
 }
+
 
 - (void)tagReaderSession:(NFCTagReaderSession *)session didDetectTags:(NSArray<__kindof id<NFCTag>> *)tags
 API_AVAILABLE(ios(13.0)) {
