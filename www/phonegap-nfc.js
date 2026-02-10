@@ -407,9 +407,5 @@ nfc.getCardData = async function (tag) {
     };
 };
 
-// kludge some global variables for plugman js-module support
-// eventually these should be replaced and referenced via the module
 window.nfc = nfc;
-window.ndef = ndef;
 window.util = util;
-window.fireNfcTagEvent = fireNfcTagEvent;
