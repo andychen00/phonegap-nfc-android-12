@@ -231,10 +231,6 @@ var util = {
 
 };
 
-// textHelper and uriHelper aren't exported, add a property
-ndef.uriHelper = uriHelper;
-ndef.textHelper = textHelper;
-
 // create aliases
 nfc.bytesToString = util.bytesToString;
 nfc.stringToBytes = util.stringToBytes;
