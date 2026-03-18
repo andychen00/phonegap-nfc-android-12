@@ -371,6 +371,7 @@ nfc.getCardData = async function (tag) {
         logNFC("Last Balance raw", nfc.bytesToHexString(bal));
         logNFC("Balance parsed", balParsed.balance);
     } catch (e) {
+        certificate = "error balance:" + e; // langsung tampil "Certificate failed (SW=6400)";
         logNFC("Balance error", e.toString());
     }
     
@@ -400,10 +401,13 @@ nfc.getCardData = async function (tag) {
     // );
 
     // 7. GET REVERSAL DATA (E7)  ✅ INI YANG KAMU TANYA
-    // var reversalData = await nfc.sendApdu(
-    //     "Get Reversal Data",
-    //     "00E70000"
-    // );
+    var reversalData;
+    try{
+        var reversaltemp = await nfc.sendApdu("Get Reversal Data", "00E70000");
+        reversalData = "iso" + nfc.bytesToHexString(reversaltemp);
+    } catch (e) {
+        certificate = "error reversal:" + e; // langsung tampil "Certificate failed (SW=6400)";
+    }
 
     // 8. GET CERTIFICATE (E0)
     var certificate = "";
@@ -411,7 +415,7 @@ nfc.getCardData = async function (tag) {
         var certificatetemp = await nfc.sendApdu("Certificate", "00E0000000");
         certificate = "iso:" + nfc.bytesToHexString(certificatetemp);
     } catch (e) {
-        certificate = "error1:" + e; // langsung tampil "Certificate failed (SW=6400)";
+        certificate = "error certificate:" + e; // langsung tampil "Certificate failed (SW=6400)";
     }
 
     await nfc.close();
@@ -423,7 +427,7 @@ nfc.getCardData = async function (tag) {
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
         updateData: "",
-        reversalData: "",
+        reversalData: reversalData,
         certificate: certificate,
         cardNumber: cardNumberHex,
         balance: balParsed.balance
