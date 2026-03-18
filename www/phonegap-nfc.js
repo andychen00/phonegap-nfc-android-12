@@ -180,7 +180,7 @@ var util = {
     // ex:
     // e80300009000 -> 1000
     parseBalance: function (bytes) {
-        if (bytes.length === 4) {
+        if (bytes.length <= 10) {
             // NEW APPLET
             var b0 = bytes[0], b1 = bytes[1], b2 = bytes[2], b3 = bytes[3];
             var balance = (b0) | (b1 << 8) | (b2 << 16) | (b3 << 24);
