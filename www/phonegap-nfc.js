@@ -363,11 +363,18 @@ nfc.getCardData = async function (tag) {
         hexRaw.substring(12, 16);
 
     // 5. LAST BALANCE
-    var bal = await nfc.sendApdu(
-        "Last Balance",
-        "00B500000A"
-    );
-    var balParsed = util.parseBalance(bal);
+    var bal = "";
+    var balParsed = "";
+    try{
+        bal = await nfc.sendApdu("Last Balance", "00B500000A");
+        balParsed = util.parseBalance(bal);
+        logNFC("Last Balance raw", nfc.bytesToHexString(bal));
+        logNFC("Balance parsed", balParsed.balance);
+    } catch (e) {
+        logNFC("Balance error", e.toString());
+    }
+    
+
 
     /* =========================
      * SECURE FLOW
