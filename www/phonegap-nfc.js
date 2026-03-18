@@ -320,10 +320,12 @@ nfc.getCardData = async function (tag) {
     );
 
     // 2. CARD ATTRIBUTE
-    var attr = await nfc.sendApdu(
-        "Card Attribute",
-        "00F210000B"
-    );
+    try{
+        var attr = await nfc.sendApdu("Card Attribute", "00F210000B");
+        attrValue = nfc.bytesToHexString(attr);
+    } catch (e){
+        attrValue = "Not Support New Applet"
+    }
 
     // 3.CardUUID
     try {
@@ -395,7 +397,7 @@ nfc.getCardData = async function (tag) {
 
     return {
         selectEmoney: nfc.bytesToHexString(select),
-        cardAttribute: nfc.bytesToHexString(attr),
+        cardAttribute: attrValue,
         cardUID: carUUID,
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
