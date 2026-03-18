@@ -301,6 +301,8 @@ nfc.getCertificate = async function () {
 nfc.getCardData = async function (tag) {
 
     var uidFromAndroid = "";
+    var attrValue = "";
+    var carUUID = "";
 
     // ===== ANDROID ONLY =====
     if (cordova.platformId === "android" && tag && tag.id) {
@@ -320,10 +322,10 @@ nfc.getCardData = async function (tag) {
     );
 
     // 2. CARD ATTRIBUTE
-    try{
+    try {
         var attr = await nfc.sendApdu("Card Attribute", "00F210000B");
         attrValue = nfc.bytesToHexString(attr);
-    } catch (e){
+    } catch (e) {
         attrValue = "Not Support New Applet"
     }
 
@@ -401,8 +403,8 @@ nfc.getCardData = async function (tag) {
         cardUID: carUUID,
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
-        updateData: nfc.bytesToHexString(attr),
-        reversalData: nfc.bytesToHexString(attr),
+        updateData: "",
+        reversalData: "",
         certificate: certificate,
         cardNumber: cardNumberHex,
         balance: balParsed.balance
