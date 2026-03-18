@@ -298,6 +298,14 @@ nfc.getCertificate = async function () {
     return resp.slice(0, resp.length - 2);
 };
 
+function logNFC(msg, data) {
+    console.log("NFCPlugin: " + msg, data || "");
+}
+
+function logNFC(msg, data) {
+    console.log("NFCPlugin: " + msg, data || "");
+}
+
 nfc.getCardData = async function (tag) {
 
     var uidFromAndroid = "";
@@ -320,13 +328,17 @@ nfc.getCardData = async function (tag) {
         "Select eMoney",
         "00A40400080000000000000001"
     );
+    logNFC("Select APDU result", nfc.bytesToHexString(select));
+
 
     // 2. CARD ATTRIBUTE
     try {
         var attr = await nfc.sendApdu("Card Attribute", "00F210000B");
         attrValue = nfc.bytesToHexString(attr);
+        logNFC("Card Attribute result", attrValue);
     } catch (e) {
-        attrValue = "Not Support New Applet"
+        attrValue = "Not Support New Applet";
+        logNFC("Card Attribute error", e.toString());
     }
 
     // 3.CardUUID
