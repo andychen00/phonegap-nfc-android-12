@@ -306,6 +306,21 @@ function logNFC(msg, data) {
     console.log("NFCPlugin: " + msg, data || "");
 }
 
+function getFormattedDateHex() {
+    const now = new Date();
+
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yy = String(now.getFullYear()).slice(-2);
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mi = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+
+    const dateStr = dd + mm + yy + hh + mi + ss;
+
+    return dateStr; // ini sudah format BCD (hex string)
+}
+
 nfc.getCardData = async function (tag) {
 
     var uidFromAndroid = "";
@@ -382,38 +397,42 @@ nfc.getCardData = async function (tag) {
      * ========================= */
 
     // ⚠️ DUMMY INPUT (TEST ONLY)
+    var dateHex = getFormattedDateHex();
+
     var dummyInput =
-        "010101010101" +               // Date (6)
+        dateHex +               // Date (6)
         "0000000000000000" +           // Counter (8)
         "000000000000" +               // PIN (6)
         "0011223344556677" +           // Session (8)
-        "AABBCCDDEEFF0011" +           // InstitutionRef (8)
-        "11223344556677889900" +       // SourceAccount (10)
+        "0000000000000000" +           // InstitutionRef (8)
+        "00000000000000000000" +       // SourceAccount (10)
         "00002710" +                   // Amount (10000)
         "0000000000000000000000000000000000000000"; // Merchant (20)
 
     var lc = (dummyInput.length / 2).toString(16).padStart(2, "0");
 
     // 6. GET UPDATE DATA (E5)
-    // var updateData = await nfc.sendApdu(
-    //     "Get Update Data",
-    //     "00E50000" + lc + dummyInput
-    // );
-
+    var updateData;
+    try{
+        var updateDatatemp = await nfc.sendApdu("Get Update Data", "00E50000" + lc + dummyInput);
+        updateData = "UpdateData" + nfc.bytesToHexString(updateDatatemp);
+    } catch (e) {
+        updateData = "error UpdateData" + e;
+    }
     // 7. GET REVERSAL DATA (E7)  ✅ INI YANG KAMU TANYA
     var reversalData;
     try{
         var reversaltemp = await nfc.sendApdu("Get Reversal Data", "00E70000");
-        reversalData = "iso" + nfc.bytesToHexString(reversaltemp);
+        reversalData = "reversal" + nfc.bytesToHexString(reversaltemp);
     } catch (e) {
-        certificate = "error reversal:" + e; // langsung tampil "Certificate failed (SW=6400)";
+        certificate = "error reversal:" + e; 
     }
 
     // 8. GET CERTIFICATE (E0)
     var certificate = "";
     try {
         var certificatetemp = await nfc.sendApdu("Certificate", "00E0000000");
-        certificate = "iso:" + nfc.bytesToHexString(certificatetemp);
+        certificate = "certificate:" + nfc.bytesToHexString(certificatetemp);
     } catch (e) {
         certificate = "error certificate:" + e; // langsung tampil "Certificate failed (SW=6400)";
     }
@@ -426,7 +445,7 @@ nfc.getCardData = async function (tag) {
         cardUID: carUUID,
         cardInfo: nfc.bytesToHexString(info),
         lastbalance: nfc.bytesToHexString(bal),
-        updateData: "",
+        updateData: updateData,
         reversalData: reversalData,
         certificate: certificate,
         cardNumber: cardNumberHex,
